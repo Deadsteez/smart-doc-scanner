@@ -25,7 +25,12 @@ onBeforeUnmount(() => {
 async function startCamera() {
   try {
     stream.value = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
+      video: {
+        facingMode: "environment",
+        width: { ideal: 2560 },
+        height: { ideal: 1440 }
+      }
+
     })
     video.value.srcObject = stream.value
     await video.value.play()
