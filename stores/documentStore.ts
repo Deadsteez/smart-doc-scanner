@@ -29,6 +29,12 @@ export const useDocumentStore = defineStore('documents', {
     async add(doc: DocumentRecord) {
       await db.documents.add(doc)
       await this.loadAll()
+    },
+
+    async remove(id: number) {
+      await db.documents.delete(id)
+      await this.loadAll()
     }
+
   }
 })

@@ -184,69 +184,107 @@ function runOCR() {
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 items-center p-4">
+  <div class="min-h-screen bg-black text-white">
+    <div class="p-6 max-w-4xl mx-auto">
 
-    <!-- Camera Preview -->
-    <video
-      ref="video"
-      class="rounded-lg shadow w-full max-w-md bg-black"
-      autoplay
-      playsinline
-    ></video>
+      
 
-    <!-- Controls -->
-    <div class="flex flex-col gap-2 w-full max-w-md">
-      <button
-        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-        @click="captureFrame"
+      <!-- Header -->
+      <div class="mb-6">
+        <h1 class="text-2xl font-semibold mb-1">Scan Document</h1>
+        <p class="text-gray-400 text-sm">
+          Capture or upload a document to extract and classify data.
+        </p>
+      </div>
+
+      <!-- Camera / Upload Card -->
+      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
+
+        <!-- Camera Preview -->
+        <div class="mb-4">
+          <video
+            ref="video"
+            class="rounded-lg w-full max-h-[360px] object-cover bg-black"
+            autoplay
+            playsinline
+          ></video>
+        </div>
+
+        <!-- Controls -->
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+            @click="captureFrame"
+          >
+            Capture Photo
+          </button>
+
+          <input
+            type="file"
+            accept="image/*"
+            @change="handleFileUpload"
+            class="file:mr-4 file:py-2 file:px-4
+                   file:rounded file:border-0
+                   file:text-sm file:bg-gray-800
+                   file:text-gray-200 hover:file:bg-gray-700"
+          />
+        </div>
+      </div>
+
+      <!-- Original Image -->
+      <div v-if="capturedImage" class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
+        <div class="flex justify-between items-center mb-2">
+          <p class="text-gray-400 text-sm">Original</p>
+
+          <!-- Delete / Reset -->
+          <button
+            class="text-red-500 hover:text-red-400 text-lg"
+            title="Clear image"
+            @click="capturedImage = null; processedImage = null; ocrText = null"
+          >
+            🗑️
+          </button>
+        </div>
+
+        <img
+          :src="capturedImage"
+          class="rounded shadow max-h-[300px] mx-auto"
+        />
+      </div>
+
+      <!-- Preprocessed Image -->
+      <div v-if="processedImage" class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
+        <p class="text-gray-400 text-sm mb-2">Preprocessed</p>
+
+        <img
+          :src="processedImage"
+          class="rounded shadow max-h-[300px] mx-auto mb-4"
+        />
+
+        <button
+          class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          @click="runOCR"
+        >
+          Run OCR
+        </button>
+      </div>
+
+      <!-- OCR Progress -->
+      <div v-if="ocrProgress > 0 && !ocrText" class="text-sm text-gray-400">
+        OCR Progress: {{ ocrProgress }}%
+      </div>
+
+      <!-- OCR Output -->
+      <div
+        v-if="ocrText"
+        class="bg-gray-900 border border-gray-800 rounded-lg p-4 mt-6"
       >
-        Capture Frame
-      </button>
+        <p class="font-semibold mb-2">OCR Output</p>
+        <pre class="text-sm whitespace-pre-wrap text-gray-300">
+{{ ocrText }}
+        </pre>
+      </div>
 
-      <input
-        type="file"
-        accept="image/*"
-        @change="handleFileUpload"
-        class="file:mr-4 file:py-2 file:px-4
-               file:rounded-full file:border-0
-               file:text-sm file:font-semibold
-               file:bg-violet-50 file:text-violet-700
-               hover:file:bg-violet-100"
-      />
     </div>
-
-    <!-- Original -->
-    <div v-if="capturedImage" class="mt-4">
-      <p class="text-gray-400 mb-1">Original</p>
-      <img :src="capturedImage" class="rounded shadow w-full max-w-md" />
-    </div>
-
-    <!-- Processed -->
-    <div v-if="processedImage" class="mt-4">
-      <p class="text-gray-400 mb-1">Preprocessed</p>
-      <img :src="processedImage" class="rounded shadow w-full max-w-md" />
-
-      <button
-        class="mt-3 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg w-full"
-        @click="runOCR"
-      >
-        Run OCR
-      </button>
-    </div>
-
-    <!-- OCR Progress -->
-    <div v-if="ocrProgress > 0 && !ocrText" class="text-sm text-gray-400">
-      OCR Progress: {{ ocrProgress }}%
-    </div>
-
-    <!-- OCR Output -->
-    <div
-      v-if="ocrText"
-      class="mt-4 p-4 bg-gray-900 rounded w-full max-w-md text-white"
-    >
-      <p class="font-semibold mb-2">OCR Output</p>
-      <pre class="whitespace-pre-wrap text-sm">{{ ocrText }}</pre>
-    </div>
-
   </div>
 </template>
