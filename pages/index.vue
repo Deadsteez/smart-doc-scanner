@@ -14,6 +14,7 @@ const documents = computed(() => documentStore.documents)
 <template>
   <div class="p-6 max-w-5xl mx-auto">
 
+    <!-- Navigation -->
     <nav class="mb-6 flex gap-4 text-blue-400">
       <NuxtLink to="/">Dashboard</NuxtLink>
       <NuxtLink to="/scan">Scan</NuxtLink>
@@ -28,18 +29,20 @@ const documents = computed(() => documentStore.documents)
     </div>
 
     <div class="grid gap-4 md:grid-cols-2">
-      <div
+      <NuxtLink
         v-for="doc in documents"
         :key="doc.id"
-        class="p-4 bg-gray-900 rounded text-white"
+        :to="`/doc/${doc.id}`"
+        class="block p-4 bg-gray-900 rounded hover:bg-gray-800 text-white"
       >
         <p class="text-sm text-gray-400">
           {{ new Date(doc.createdAt).toLocaleString() }}
         </p>
+
         <pre class="text-sm whitespace-pre-wrap mt-2">
-{{ doc.cleanedText }}
+{{ doc.cleanedText.slice(0, 200) }}…
         </pre>
-      </div>
+      </NuxtLink>
     </div>
 
   </div>
