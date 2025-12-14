@@ -7,6 +7,17 @@ export const useDocumentStore = defineStore('documents', {
     documents: [] as DocumentRecord[]
   }),
 
+  getters: {
+    sortedDocuments: (state) =>
+      [...state.documents].sort((a, b) => b.createdAt - a.createdAt),
+
+    byCategory: (state) => (category: string) =>
+      state.documents.filter(d => d.category === category),
+
+    byId: (state) => (id: number) =>
+      state.documents.find(d => d.id === id)
+  },
+
   actions: {
     async loadAll() {
       this.documents = await db.documents
