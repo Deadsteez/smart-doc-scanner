@@ -13,6 +13,7 @@ export interface DocumentRecord {
     total?: string
     receiptNumber?: string
   }
+  category: 'invoice' | 'receipt' | 'other'
   synced: boolean
 }
 
