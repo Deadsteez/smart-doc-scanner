@@ -1,15 +1,35 @@
 <script setup>
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useDocumentStore } from '~/stores/documentStore'
 
 const documentStore = useDocumentStore()
 
+// UI state
+const searchQuery = ref('')
+const selectedCategory = ref('all')
+
+// Load documents once
 onMounted(async () => {
   await documentStore.loadAll()
 })
 
-const documents = computed(() => documentStore.documents)
+// Filtered documents
+const documents = computed(() => {
+  return documentStore.documents.filter(doc => {
+    const matchesSearch =
+      doc.cleanedText
+        .toLowerCase()
+        .includes(searchQuery.value.toLowerCase())
+
+    const matchesCategory =
+      selectedCategory.value === 'all' ||
+      doc.category === selectedCategory.value
+
+    return matchesSearch && matchesCategory
+  })
+})
 </script>
+
 
 <template>
   <div class="p-6 max-w-5xl mx-auto">
@@ -24,10 +44,32 @@ const documents = computed(() => documentStore.documents)
       Scanned Documents
     </h1>
 
-    <div v-if="documents.length === 0" class="text-gray-400">
-      No documents scanned yet.
+    <!-- Search + Filter -->
+    <div class="flex gap-4 mb-6">
+      <input
+        v-model="searchQuery"
+        placeholder="Search OCR text…"
+        class="px-3 py-2 rounded bg-gray-900 text-white w-full"
+      />
+
+      <select
+        v-model="selectedCategory"
+        class="px-3 py-2 rounded bg-gray-900 text-white"
+      >
+        <option value="all">All</option>
+        <option value="receipt">Receipt</option>
+        <option value="invoice">Invoice</option>
+        <option value="bill">Bill</option>
+        <option value="other">Other</option>
+        <option value="uncategorized">Uncategorized</option>
+      </select>
     </div>
 
+    <div v-if="documents.length === 0" class="text-gray-400">
+      No matching documents.
+    </div>
+
+    <!-- Document list -->
     <div class="grid gap-4 md:grid-cols-2">
       <NuxtLink
         v-for="doc in documents"
@@ -35,15 +77,17 @@ const documents = computed(() => documentStore.documents)
         :to="`/doc/${doc.id}`"
         class="block p-4 bg-gray-900 rounded hover:bg-gray-800 text-white"
       >
-        <p class="text-sm text-gray-400">
-          {{ new Date(doc.createdAt).toLocaleString() }}
-        </p>
+        <div class="flex justify-between text-sm text-gray-400 mb-2">
+          <span>{{ new Date(doc.createdAt).toLocaleString() }}</span>
+          <span class="uppercase">{{ doc.category }}</span>
+        </div>
 
-        <pre class="text-sm whitespace-pre-wrap mt-2">
-{{ doc.cleanedText.slice(0, 200) }}…
+        <pre class="text-sm whitespace-pre-wrap">
+{{ doc.cleanedText.slice(0, 150) }}…
         </pre>
       </NuxtLink>
     </div>
 
   </div>
 </template>
+

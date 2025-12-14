@@ -3,7 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { cleanOcrText } from '~/composables/useOcrCleanup'
 import { extractFields } from '~/services/extractFields'
 import { useDocumentStore } from '~/stores/documentStore'
-
+import { classifyDocument } from '~/composables/useDocumentClassifier'
+import { extractCvFeatures } from '~/composables/useCvFeatures'
 // --------------------
 // State
 // --------------------
@@ -44,7 +45,7 @@ onMounted(() => {
 
   // OCR worker
   ocrWorker = new Worker('/workers/ocrWorker.js')
-  ocrWorker.onmessage = (e) => {
+  ocrWorker.onmessage = async (e) => {
     const msg = e.data
 
     if (msg.type === 'progress') {
@@ -55,19 +56,32 @@ onMounted(() => {
       ocrText.value = msg.text
       ocrProgress.value = 100
 
-      // -------- Phase 4: Normalize + Extract + Persist --------
-      const cleanedText = cleanOcrText(msg.text)
-      const extracted = extractFields(cleanedText)
+    // Normalize + extract (NLP)
+    const cleanedText = cleanOcrText(msg.text)
+    const extracted = extractFields(cleanedText)
 
-      documentStore.add({
-        createdAt: Date.now(),
-        image: processedImage.value ?? '',
-        ocrText: msg.text,
-        cleanedText,
-        extracted,
-        synced: false
-      })
+    const safeText = typeof cleanedText === 'string' ? cleanedText : ''
+
+    // --- CV features from image ---
+    const cvFeatures = await extractCvFeatures(processedImage.value)
+
+    // --- Multimodal classification (NLP + CV) ---
+    const category = classifyDocument(safeText, cvFeatures)
+
+    console.log('Saving document with category:', category)
+
+    documentStore.add({
+      createdAt: Date.now(),
+      image: processedImage.value ?? '',
+      ocrText: msg.text,
+      cleanedText: safeText,
+      extracted,
+      category,
+      synced: false
+    })
+
     }
+
 
     if (msg.type === 'error') {
       console.error('OCR error:', msg.error)
