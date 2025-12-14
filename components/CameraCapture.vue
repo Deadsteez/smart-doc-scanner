@@ -1,5 +1,8 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { cleanOcrText } from '~/composables/useOcrCleanup'
+import { extractFields } from '~/services/extractFields'
+import { useDocumentStore } from '~/stores/documentStore'
 
 // --------------------
 // State
@@ -20,9 +23,17 @@ let preprocessWorker = null
 let ocrWorker = null
 
 // --------------------
+// Store (CLIENT ONLY)
+// --------------------
+let documentStore = null
+
+// --------------------
 // Lifecycle
 // --------------------
 onMounted(() => {
+  // Initialize Pinia store (client-only)
+  documentStore = useDocumentStore()
+
   // OpenCV preprocessing worker
   preprocessWorker = new Worker('/workers/preprocessWorker.js')
   preprocessWorker.onmessage = (e) => {
@@ -36,12 +47,26 @@ onMounted(() => {
   ocrWorker.onmessage = (e) => {
     const msg = e.data
 
-    if (msg.type === "progress") {
+    if (msg.type === 'progress') {
       ocrProgress.value = Math.floor(msg.progress * 100)
     }
 
-    if (msg.type === "result") {
+    if (msg.type === 'result') {
       ocrText.value = msg.text
+      ocrProgress.value = 100
+
+      // -------- Phase 4: Normalize + Extract + Persist --------
+      const cleanedText = cleanOcrText(msg.text)
+      const extracted = extractFields(cleanedText)
+
+      documentStore.add({
+        createdAt: Date.now(),
+        image: processedImage.value ?? '',
+        ocrText: msg.text,
+        cleanedText,
+        extracted,
+        synced: false
+      })
     }
 
     if (msg.type === 'error') {
