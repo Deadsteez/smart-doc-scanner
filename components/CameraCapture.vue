@@ -1,38 +1,36 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
-import { cleanOcrText } from '~/composables/useOcrCleanup'
+import { cleanOcrText, isValidOcrOutput } from '~/composables/useOcrCleanup'
 import { extractFields } from '~/services/extractFields'
 import { useDocumentStore } from '~/stores/documentStore'
 import { classifyDocument } from '~/composables/useDocumentClassifier'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
-// --------------------
-// State
-// --------------------
-const video = ref(null)
+
+// ─── State ────────────────────────────────────────────────────
+const videoEl = ref(null)        // owned here — NOT passed as prop
+const fileInputEl = ref(null)    // hidden file input for styled upload button
 const stream = ref(null)
 
 const capturedImage = ref(null)
 const processedImage = ref(null)
-
 const ocrText = ref(null)
 const ocrProgress = ref(0)
 
-// --------------------
-// Workers
-// --------------------
+const cameraError = ref(null)
+const captureError = ref(null)
+const isSaving = ref(false)
+const isSaved = ref(false)
+const saveError = ref(null)
+
+// ─── Workers ──────────────────────────────────────────────────
 let preprocessWorker = null
 let ocrWorker = null
 
-// --------------------
-// Store (CLIENT ONLY)
-// --------------------
+// ─── Store (client-only) ──────────────────────────────────────
 let documentStore = null
 
-// --------------------
-// Lifecycle
-// --------------------
+// ─── Lifecycle ────────────────────────────────────────────────
 onMounted(() => {
-  // Initialize Pinia store (client-only)
   documentStore = useDocumentStore()
 
   // OpenCV preprocessing worker
@@ -42,50 +40,33 @@ onMounted(() => {
       processedImage.value = e.data.cleanedImage
     }
   }
+  preprocessWorker.onerror = (err) => console.error('Preprocess worker error:', err)
 
-  // OCR worker
+  // Tesseract OCR worker
   ocrWorker = new Worker('/workers/ocrWorker.js')
   ocrWorker.onmessage = async (e) => {
     const msg = e.data
 
     if (msg.type === 'progress') {
       ocrProgress.value = Math.floor(msg.progress * 100)
+      return
     }
-
-    if (msg.type === 'result') {
-      ocrText.value = msg.text
-      ocrProgress.value = 100
-
-    // Normalize + extract (NLP)
-    const cleanedText = cleanOcrText(msg.text)
-    const extracted = extractFields(cleanedText)
-
-    const safeText = typeof cleanedText === 'string' ? cleanedText : ''
-
-    // --- CV features from image ---
-    const cvFeatures = await extractCvFeatures(processedImage.value)
-
-    // --- Multimodal classification (NLP + CV) ---
-    const category = classifyDocument(safeText, cvFeatures)
-
-    console.log('Saving document with category:', category)
-
-    documentStore.add({
-      createdAt: Date.now(),
-      image: processedImage.value ?? '',
-      ocrText: msg.text,
-      cleanedText: safeText,
-      extracted,
-      category,
-      synced: false
-    })
-
-    }
-
 
     if (msg.type === 'error') {
       console.error('OCR error:', msg.error)
+      ocrProgress.value = 0
+      return
     }
+
+    if (msg.type !== 'result') return
+
+    ocrText.value = msg.text
+    ocrProgress.value = 100
+    await saveDocument(msg.text)
+  }
+  ocrWorker.onerror = (err) => {
+    console.error('OCR worker error:', err)
+    ocrProgress.value = 0
   }
 
   startCamera()
@@ -93,196 +74,336 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   stopCamera()
-  if (preprocessWorker) preprocessWorker.terminate()
-  if (ocrWorker) ocrWorker.terminate()
+  preprocessWorker?.terminate()
+  ocrWorker?.terminate()
 })
 
-// --------------------
-// Camera logic
-// --------------------
+// ─── Camera ───────────────────────────────────────────────────
 async function startCamera() {
+  cameraError.value = null
   try {
     stream.value = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' }
+      video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
     })
-    video.value.srcObject = stream.value
-    await video.value.play()
+    videoEl.value.srcObject = stream.value
+    await videoEl.value.play()
   } catch (err) {
-    console.error('Camera error:', err)
+    cameraError.value = err.name === 'NotAllowedError'
+      ? 'Camera permission denied. Please allow camera access and refresh.'
+      : 'Could not start camera: ' + err.message
   }
 }
 
 function stopCamera() {
-  if (stream.value) {
-    stream.value.getTracks().forEach(t => t.stop())
-  }
+  stream.value?.getTracks().forEach(t => t.stop())
 }
 
-// --------------------
-// Capture from camera
-// --------------------
+// ─── Capture from camera ──────────────────────────────────────
 function captureFrame() {
-  if (!video.value) return
+  captureError.value = null
+
+  if (!videoEl.value) {
+    captureError.value = 'Video not ready.'
+    return
+  }
+
+  if (!stream.value?.active) {
+    captureError.value = 'Camera stream not active. Please wait and try again.'
+    return
+  }
+
+  const width = videoEl.value.videoWidth || videoEl.value.clientWidth
+  const height = videoEl.value.videoHeight || videoEl.value.clientHeight
+
+  if (!width || !height) {
+    captureError.value = 'Camera not ready yet — please wait a moment and try again.'
+    return
+  }
 
   const canvas = document.createElement('canvas')
-  canvas.width = video.value.videoWidth
-  canvas.height = video.value.videoHeight
-
-  const ctx = canvas.getContext('2d')
-  ctx.drawImage(video.value, 0, 0)
-
-  const dataURL = canvas.toDataURL('image/jpeg')
-  processImage(dataURL)
+  canvas.width = width
+  canvas.height = height
+  canvas.getContext('2d').drawImage(videoEl.value, 0, 0, width, height)
+  processImage(canvas.toDataURL('image/jpeg', 0.92))
 }
 
-// --------------------
-// File upload
-// --------------------
+// ─── File upload ──────────────────────────────────────────────
+function triggerFileInput() {
+  fileInputEl.value?.click()
+}
+
 function handleFileUpload(event) {
-  const file = event.target.files[0]
+  const file = event?.target?.files?.[0]
   if (!file) return
-
   const reader = new FileReader()
-  reader.onload = (e) => {
-    processImage(e.target.result)
-  }
+  reader.onload = (e) => processImage(e.target.result)
   reader.readAsDataURL(file)
-
   event.target.value = ''
 }
 
-// --------------------
-// Shared preprocessing entry
-// --------------------
+// ─── Shared preprocessing entry ───────────────────────────────
 function processImage(dataUrl) {
   capturedImage.value = dataUrl
   processedImage.value = null
   ocrText.value = null
   ocrProgress.value = 0
-
-  preprocessWorker.postMessage({
-    imageDataURL: dataUrl
-  })
+  isSaved.value = false
+  saveError.value = null
+  captureError.value = null
+  preprocessWorker.postMessage({ imageDataURL: dataUrl })
 }
 
-// --------------------
-// Run OCR
-// --------------------
+// ─── OCR ──────────────────────────────────────────────────────
 function runOCR() {
-  if (!processedImage.value) {
-    alert('Preprocess an image first')
-    return
-  }
-
+  if (!processedImage.value) return
   ocrText.value = null
   ocrProgress.value = 0
+  isSaved.value = false
+  saveError.value = null
+  ocrWorker.postMessage({ image: processedImage.value })
+}
 
-  ocrWorker.postMessage({
-    image: processedImage.value
-  })
+// ─── Save to Dexie + Supabase ─────────────────────────────────
+async function saveDocument(rawText) {
+  if (!isValidOcrOutput(rawText)) {
+    console.warn('OCR output too noisy, skipping save')
+    return
+  }
+  if (!processedImage.value) return
+
+  isSaving.value = true
+  saveError.value = null
+
+  try {
+    const cleanedText = cleanOcrText(rawText)
+    const extracted = extractFields(cleanedText)
+    const safeText = typeof cleanedText === 'string' ? cleanedText : ''
+    const cvFeatures = await extractCvFeatures(processedImage.value)
+    const category = classifyDocument(safeText, cvFeatures)
+
+    console.log('Saving document with category:', category)
+
+    // Saves locally to Dexie instantly, then pushes to Supabase in background
+    await documentStore.add({
+      createdAt: Date.now(),
+      image: processedImage.value,
+      ocrText: rawText,
+      cleanedText: safeText,
+      extracted,
+      category,
+      synced: false,
+    })
+
+    isSaved.value = true
+  } catch (err) {
+    console.error('Save error:', err)
+    saveError.value = 'Failed to save document: ' + err.message
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// ─── Clear ────────────────────────────────────────────────────
+function clearImages() {
+  capturedImage.value = null
+  processedImage.value = null
+  ocrText.value = null
+  ocrProgress.value = 0
+  isSaved.value = false
+  saveError.value = null
+  captureError.value = null
 }
 </script>
 
 <template>
   <div class="min-h-screen bg-black text-white">
-    <div class="p-6 max-w-4xl mx-auto">
+    <div class="p-6 max-w-4xl mx-auto space-y-5">
 
-      
-
-      <!-- Header -->
-      <div class="mb-6">
+      <!-- Page header -->
+      <div class="mb-2">
         <h1 class="text-2xl font-semibold mb-1">Scan Document</h1>
-        <p class="text-gray-400 text-sm">
-          Capture or upload a document to extract and classify data.
-        </p>
+        <p class="text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
       </div>
 
-      <!-- Camera / Upload Card -->
-      <div class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
+      <!-- ── Camera Card ── -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
 
-        <!-- Camera Preview -->
-        <div class="mb-4">
-          <video
-            ref="video"
-            class="rounded-lg w-full max-h-[360px] object-cover bg-black"
-            autoplay
-            playsinline
-          ></video>
+        <!-- Camera error -->
+        <div
+          v-if="cameraError"
+          class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2"
+        >
+          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+          </svg>
+          {{ cameraError }}
         </div>
 
-        <!-- Controls -->
-        <div class="flex flex-col sm:flex-row gap-3">
+        <!-- Video feed -->
+        <div class="relative bg-black">
+          <video
+            ref="videoEl"
+            class="w-full max-h-[360px] object-cover block"
+            autoplay
+            playsinline
+            muted
+          />
+          <!-- Live indicator -->
+          <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
+            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+            <span class="text-white text-xs font-medium">LIVE</span>
+          </div>
+        </div>
+
+        <!-- Capture error -->
+        <div
+          v-if="captureError"
+          class="mx-4 mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-sm text-yellow-400"
+        >
+          {{ captureError }}
+        </div>
+
+        <!-- Action buttons -->
+        <div class="p-4 flex gap-3">
+          <!-- Capture -->
           <button
-            class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
             @click="captureFrame"
+            class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
           >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
             Capture Photo
           </button>
 
+          <!-- Upload — styled button, hidden real input -->
+          <button
+            @click="triggerFileInput"
+            class="flex-1 bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-gray-700"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
+            Upload Photo
+          </button>
+
           <input
+            ref="fileInputEl"
             type="file"
             accept="image/*"
+            class="hidden"
             @change="handleFileUpload"
-            class="file:mr-4 file:py-2 file:px-4
-                   file:rounded file:border-0
-                   file:text-sm file:bg-gray-800
-                   file:text-gray-200 hover:file:bg-gray-700"
           />
         </div>
       </div>
 
-      <!-- Original Image -->
-      <div v-if="capturedImage" class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
-        <div class="flex justify-between items-center mb-2">
-          <p class="text-gray-400 text-sm">Original</p>
+      <!-- ── Saving indicator ── -->
+      <div
+        v-if="isSaving"
+        class="p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-400 flex items-center gap-3"
+      >
+        <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+        Saving document and syncing to cloud…
+      </div>
 
-          <!-- Delete / Reset -->
+      <!-- ── Original Image ── -->
+      <div v-if="capturedImage" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div class="flex justify-between items-center mb-3">
+          <p class="text-gray-400 text-sm font-medium">Original</p>
           <button
-            class="text-red-500 hover:text-red-400 text-lg"
+            class="text-red-500 hover:text-red-400 transition text-lg"
             title="Clear image"
-            @click="capturedImage = null; processedImage = null; ocrText = null"
+            @click="clearImages"
           >
             🗑️
           </button>
         </div>
-
-        <img
-          :src="capturedImage"
-          class="rounded shadow max-h-[300px] mx-auto"
-        />
+        <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
       </div>
 
-      <!-- Preprocessed Image -->
-      <div v-if="processedImage" class="bg-gray-900 border border-gray-800 rounded-lg p-4 mb-6">
-        <p class="text-gray-400 text-sm mb-2">Preprocessed</p>
-
-        <img
-          :src="processedImage"
-          class="rounded shadow max-h-[300px] mx-auto mb-4"
-        />
-
+      <!-- ── Preprocessed Image ── -->
+      <div v-if="processedImage" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <p class="text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
+        <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
         <button
-          class="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+          class="w-full bg-green-600 hover:bg-green-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
           @click="runOCR"
         >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
           Run OCR
         </button>
       </div>
 
-      <!-- OCR Progress -->
-      <div v-if="ocrProgress > 0 && !ocrText" class="text-sm text-gray-400">
-        OCR Progress: {{ ocrProgress }}%
+      <!-- ── OCR Progress ── -->
+      <div
+        v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText"
+        class="bg-gray-900 border border-gray-800 rounded-xl p-4"
+      >
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-4 h-4 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+          <span class="text-sm text-gray-300">Extracting text from document…</span>
+        </div>
+        <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+          <div
+            class="h-full bg-blue-500 transition-all duration-300"
+            :style="{ width: `${ocrProgress}%` }"
+          ></div>
+        </div>
+        <p class="text-xs text-gray-500 mt-2 text-right">{{ ocrProgress }}%</p>
       </div>
 
-      <!-- OCR Output -->
+      <!-- ── OCR Output ── -->
+      <div v-if="ocrText" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <p class="font-semibold text-gray-200">OCR Output</p>
+          <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
+            Complete
+          </span>
+        </div>
+        <pre class="text-sm whitespace-pre-wrap text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-black p-4 rounded-lg">{{ ocrText }}</pre>
+      </div>
+
+      <!-- ── Save error ── -->
       <div
-        v-if="ocrText"
-        class="bg-gray-900 border border-gray-800 rounded-lg p-4 mt-6"
+        v-if="saveError"
+        class="p-4 bg-red-900/20 border border-red-800 rounded-xl text-sm text-red-400"
       >
-        <p class="font-semibold mb-2">OCR Output</p>
-        <pre class="text-sm whitespace-pre-wrap text-gray-300">
-{{ ocrText }}
-        </pre>
+        {{ saveError }}
+      </div>
+
+      <!-- ── Success ── -->
+      <div
+        v-if="isSaved"
+        class="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-400 flex items-center gap-3"
+      >
+        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        </svg>
+        <div>
+          <p class="font-medium">Document saved!</p>
+          <p class="text-xs opacity-75 mt-0.5">Saved locally and syncing to cloud in background.</p>
+        </div>
+        <NuxtLink
+          to="/"
+          class="ml-auto text-green-400 hover:underline font-semibold text-sm whitespace-nowrap"
+        >
+          View Dashboard →
+        </NuxtLink>
+      </div>
+
+      <!-- ── Sync status ── -->
+      <div
+        v-if="documentStore?.syncing"
+        class="text-xs text-gray-500 text-center flex items-center justify-center gap-1.5"
+      >
+        <div class="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin"></div>
+        Syncing to Supabase…
+      </div>
+      <div v-if="documentStore?.syncError" class="text-xs text-red-400 text-center">
+        Sync failed: {{ documentStore.syncError }} — saved locally, will retry on next load.
       </div>
 
     </div>
