@@ -11,8 +11,6 @@ export const useDocumentStore = defineStore('documents', () => {
 
   // ─── Helpers ─────────────────────────────────────────────────
 
-  // Single helper — supabase.auth.session() was removed in v2.
-  // Always use getSession() which works for both SSR and client.
   async function getCurrentUserId(): Promise<string | null> {
     try {
       const supabase = getSupabase()
@@ -22,8 +20,6 @@ export const useDocumentStore = defineStore('documents', () => {
       return null
     }
   }
-
-  // ─── Reload local state ──────────────────────────────────────
 
   async function reloadLocal() {
     documents.value = await db.documents
@@ -35,10 +31,7 @@ export const useDocumentStore = defineStore('documents', () => {
   // ─── Load ────────────────────────────────────────────────────
 
   async function loadAll() {
-    // 1. Show local data immediately
     await reloadLocal()
-
-    // 2. Pull any cloud records not yet in local DB
     await pullFromSupabase()
   }
 
@@ -57,18 +50,14 @@ export const useDocumentStore = defineStore('documents', () => {
         .order('created_at', { ascending: false })
 
       if (error) {
-        console.error('[Store] Supabase pull error:', error.message)
+        console.error('[Store] Pull error:', error.message)
         return
       }
-
       if (!data?.length) return
 
-      // Upsert cloud records into Dexie — skip if already present by supabaseId
       for (const row of data) {
         const exists = await db.documents
-          .where('supabaseId')
-          .equals(row.id)
-          .first()
+          .where('supabaseId').equals(row.id).first()
 
         if (!exists) {
           await db.documents.add({
@@ -82,10 +71,14 @@ export const useDocumentStore = defineStore('documents', () => {
               vendor: row.vendor,
               date: row.date,
               total: row.total,
+              tax: row.tax,
               receiptNumber: row.receipt_number,
+              paymentMethod: row.payment_method,
+              items: row.items ?? [],
             },
             category: {
               type: row.category ?? 'other',
+              nlpLabel: row.nlp_label,
               confidence: row.category_confidence ?? 0,
               scores: { invoice: 0, receipt: 0 },
             },
@@ -105,7 +98,6 @@ export const useDocumentStore = defineStore('documents', () => {
   async function add(doc: Omit<DocumentRecord, 'id' | 'supabaseId'>) {
     const userId = await getCurrentUserId()
 
-    // Save locally first — UI updates instantly, works offline
     const localId = await db.documents.add({
       ...doc,
       userId: userId ?? undefined,
@@ -114,7 +106,6 @@ export const useDocumentStore = defineStore('documents', () => {
 
     await reloadLocal()
 
-    // Push to Supabase in background if authenticated
     if (userId) {
       await pushToSupabase(localId, userId)
     }
@@ -139,11 +130,18 @@ export const useDocumentStore = defineStore('documents', () => {
           image: record.image,
           ocr_text: record.ocrText,
           cleaned_text: record.cleanedText,
+          // Core extracted fields
           vendor: record.extracted?.vendor ?? null,
           date: record.extracted?.date ?? null,
           total: record.extracted?.total ?? null,
           receipt_number: record.extracted?.receiptNumber ?? null,
+          // New NLP-extracted fields
+          tax: record.extracted?.tax ?? null,
+          payment_method: record.extracted?.paymentMethod ?? null,
+          items: record.extracted?.items ?? null,
+          // Classification
           category: record.category?.type ?? 'other',
+          nlp_label: record.category?.nlpLabel ?? null,
           category_confidence: record.category?.confidence ?? 0,
           synced: true,
         })
@@ -151,12 +149,11 @@ export const useDocumentStore = defineStore('documents', () => {
         .single()
 
       if (error) {
-        console.error('[Store] Supabase push error:', error.message)
+        console.error('[Store] Push error:', error.message)
         syncError.value = error.message
         return
       }
 
-      // Mark record as synced locally with its Supabase UUID
       await db.documents.update(localId, {
         synced: true,
         supabaseId: data.id,
@@ -171,7 +168,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // ─── Sync pending (call on app load for offline resilience) ──
+  // ─── Sync pending ────────────────────────────────────────────
 
   async function syncPending() {
     const userId = await getCurrentUserId()
@@ -182,9 +179,7 @@ export const useDocumentStore = defineStore('documents', () => {
       .toArray()
 
     for (const record of pending) {
-      if (record.id) {
-        await pushToSupabase(record.id, userId)
-      }
+      if (record.id) await pushToSupabase(record.id, userId)
     }
   }
 
@@ -196,12 +191,9 @@ export const useDocumentStore = defineStore('documents', () => {
     if (record?.supabaseId) {
       try {
         const supabase = getSupabase()
-        await supabase
-          .from('documents')
-          .delete()
-          .eq('id', record.supabaseId)
+        await supabase.from('documents').delete().eq('id', record.supabaseId)
       } catch (err) {
-        console.error('[Store] Supabase delete error:', err)
+        console.error('[Store] Delete error:', err)
       }
     }
 

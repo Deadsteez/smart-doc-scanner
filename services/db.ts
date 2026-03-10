@@ -1,26 +1,42 @@
 import Dexie from 'dexie'
 import type { Table } from 'dexie'
 
+export interface LineItem {
+  description: string
+  amount: string
+}
+
+export interface ExtractedFields {
+  vendor?: string
+  date?: string
+  total?: string
+  tax?: string
+  receiptNumber?: string
+  paymentMethod?: string
+  items?: LineItem[]
+}
+
 export interface DocumentRecord {
-  id?: number           // local Dexie auto-increment PK
-  supabaseId?: string   // UUID from Supabase after sync
-  userId?: string       // Supabase auth user UUID
-  createdAt: number     // Unix ms timestamp
-  image: string         // base64 data URL
+  id?: number
+  supabaseId?: string
+  userId?: string
+  createdAt: number
+  image: string
   ocrText: string
   cleanedText: string
-  extracted: {
-    vendor?: string
-    date?: string
-    total?: string
-    receiptNumber?: string
-  }
+  extracted: ExtractedFields
   category: {
     type: 'invoice' | 'receipt' | 'other'
+    nlpLabel?: string       // full NLP label e.g. 'bank_statement'
     confidence: number
-    scores: { invoice: number; receipt: number }
+    scores: {
+      invoice: number
+      receipt: number
+      bank_statement?: number
+      other?: number
+    }
   }
-  synced: boolean       // false = pending Supabase upload
+  synced: boolean
 }
 
 class DocumentDB extends Dexie {
@@ -28,8 +44,7 @@ class DocumentDB extends Dexie {
 
   constructor() {
     super('SmartDocScannerDB')
-    this.version(2).stores({
-      // Added supabaseId and userId to indexed fields
+    this.version(3).stores({
       documents: '++id, createdAt, synced, supabaseId, userId'
     })
   }
