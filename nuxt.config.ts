@@ -26,5 +26,10 @@ export default defineNuxtConfig({
       supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
     }
   },
+
+  vite: {
+    worker: {
+      format: 'es'
+    }},
   compatibilityDate: '2024-11-01',
 })
