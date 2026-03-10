@@ -1,10 +1,10 @@
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { cleanOcrText, isValidOcrOutput } from '~/composables/useOcrCleanup'
-import { extractFields } from '~/services/extractFields'
 import { useDocumentStore } from '~/stores/documentStore'
-import { classifyDocument } from '~/composables/useDocumentClassifier'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
+// NLP worker loaded via Vite's ?worker syntax — handles ES module bundling automatically
+import NlpWorker from '~/workers/nlpWorker.js?worker'
 
 // ─── State ────────────────────────────────────────────────────
 const videoEl = ref(null)        // owned here — NOT passed as prop
@@ -15,16 +15,19 @@ const capturedImage = ref(null)
 const processedImage = ref(null)
 const ocrText = ref(null)
 const ocrProgress = ref(0)
+const ocrConfidence = ref(null)
 
 const cameraError = ref(null)
 const captureError = ref(null)
 const isSaving = ref(false)
 const isSaved = ref(false)
 const saveError = ref(null)
+const nlpStatus = ref(null)   // shows NLP pipeline stage to user
 
 // ─── Workers ──────────────────────────────────────────────────
 let preprocessWorker = null
 let ocrWorker = null
+let nlpWorker = null       // Transformers.js NER + classifier
 
 // ─── Store (client-only) ──────────────────────────────────────
 let documentStore = null
@@ -60,13 +63,47 @@ onMounted(() => {
 
     if (msg.type !== 'result') return
 
+    // Worker now returns text, rawText, confidence, words
     ocrText.value = msg.text
+    ocrConfidence.value = msg.confidence ? Math.round(msg.confidence) : null
     ocrProgress.value = 100
     await saveDocument(msg.text)
   }
   ocrWorker.onerror = (err) => {
     console.error('OCR worker error:', err)
     ocrProgress.value = 0
+  }
+
+  // NLP worker — Transformers.js NER + zero-shot classifier
+  nlpWorker = new NlpWorker()
+  nlpWorker.onmessage = async (e) => {
+    const msg = e.data
+
+    if (msg.type === 'progress') {
+      nlpStatus.value = msg.status
+      return
+    }
+
+    if (msg.type === 'error') {
+      console.error('[NLP] Error:', msg.error)
+      nlpStatus.value = null
+      // NLP failed — still save with regex fallback fields
+      await saveDocumentFallback(pendingOcrText.value, pendingCvFeatures.value)
+      return
+    }
+
+    if (msg.type === 'result') {
+      nlpStatus.value = null
+      await saveDocumentWithNlp(
+        pendingOcrText.value,
+        msg.extracted,
+        msg.category
+      )
+    }
+  }
+  nlpWorker.onerror = (err) => {
+    console.error('NLP worker error:', err)
+    nlpStatus.value = null
   }
 
   startCamera()
@@ -76,6 +113,7 @@ onBeforeUnmount(() => {
   stopCamera()
   preprocessWorker?.terminate()
   ocrWorker?.terminate()
+  nlpWorker?.terminate()
 })
 
 // ─── Camera ───────────────────────────────────────────────────
@@ -158,12 +196,17 @@ function runOCR() {
   if (!processedImage.value) return
   ocrText.value = null
   ocrProgress.value = 0
+  ocrConfidence.value = null
   isSaved.value = false
   saveError.value = null
   ocrWorker.postMessage({ image: processedImage.value })
 }
 
-// ─── Save to Dexie + Supabase ─────────────────────────────────
+// ─── Pending data shared between OCR and NLP workers ─────────
+const pendingOcrText = ref(null)
+const pendingCvFeatures = ref(null)
+
+// ─── Save to Dexie + Supabase (called after NLP completes) ───
 async function saveDocument(rawText) {
   if (!isValidOcrOutput(rawText)) {
     console.warn('OCR output too noisy, skipping save')
@@ -173,31 +216,69 @@ async function saveDocument(rawText) {
 
   isSaving.value = true
   saveError.value = null
+  nlpStatus.value = 'Extracting fields...'
 
   try {
     const cleanedText = cleanOcrText(rawText)
-    const extracted = extractFields(cleanedText)
-    const safeText = typeof cleanedText === 'string' ? cleanedText : ''
     const cvFeatures = await extractCvFeatures(processedImage.value)
-    const category = classifyDocument(safeText, cvFeatures)
 
-    console.log('Saving document with category:', category)
+    // Store for use by nlpWorker message handler
+    pendingOcrText.value = cleanedText
+    pendingCvFeatures.value = cvFeatures
 
-    // Saves locally to Dexie instantly, then pushes to Supabase in background
+    // Send to NLP worker — response handled in nlpWorker.onmessage
+    nlpWorker.postMessage({ text: cleanedText, cvFeatures })
+
+  } catch (err) {
+    console.error('Pipeline error:', err)
+    saveError.value = 'Processing failed: ' + err.message
+    isSaving.value = false
+    nlpStatus.value = null
+  }
+}
+
+// Called when NLP worker returns successfully
+async function saveDocumentWithNlp(cleanedText, extracted, category) {
+  try {
     await documentStore.add({
       createdAt: Date.now(),
       image: processedImage.value,
-      ocrText: rawText,
-      cleanedText: safeText,
+      ocrText: ocrText.value,
+      cleanedText,
+      extracted,   // full NLP-extracted fields: vendor, date, total, tax, items, paymentMethod
+      category,    // NLP + CV blended classification
+      synced: false,
+    })
+    isSaved.value = true
+  } catch (err) {
+    console.error('Save error:', err)
+    saveError.value = 'Failed to save: ' + err.message
+  } finally {
+    isSaving.value = false
+  }
+}
+
+// Fallback if NLP worker fails — uses regex extraction
+async function saveDocumentFallback(cleanedText, cvFeatures) {
+  console.warn('[CameraCapture] NLP failed, using regex fallback')
+  try {
+    const { extractFields } = await import('~/services/extractFields')
+    const { classifyDocument } = await import('~/composables/useDocumentClassifier')
+    const extracted = extractFields(cleanedText)
+    const category = classifyDocument(cleanedText, cvFeatures)
+
+    await documentStore.add({
+      createdAt: Date.now(),
+      image: processedImage.value,
+      ocrText: ocrText.value,
+      cleanedText,
       extracted,
       category,
       synced: false,
     })
-
     isSaved.value = true
   } catch (err) {
-    console.error('Save error:', err)
-    saveError.value = 'Failed to save document: ' + err.message
+    saveError.value = 'Failed to save: ' + err.message
   } finally {
     isSaving.value = false
   }
@@ -209,6 +290,7 @@ function clearImages() {
   processedImage.value = null
   ocrText.value = null
   ocrProgress.value = 0
+  ocrConfidence.value = null
   isSaved.value = false
   saveError.value = null
   captureError.value = null
@@ -304,7 +386,7 @@ function clearImages() {
         class="p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-400 flex items-center gap-3"
       >
         <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-        Saving document and syncing to cloud…
+        {{ nlpStatus ?? 'Saving document and syncing to cloud…' }}
       </div>
 
       <!-- ── Original Image ── -->
@@ -359,9 +441,22 @@ function clearImages() {
       <div v-if="ocrText" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
           <p class="font-semibold text-gray-200">OCR Output</p>
-          <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
-            Complete
-          </span>
+          <div class="flex items-center gap-2">
+            <span
+              v-if="ocrConfidence !== null"
+              class="text-xs px-2.5 py-1 rounded-full border"
+              :class="ocrConfidence >= 80
+                ? 'bg-green-900/30 text-green-400 border-green-800'
+                : ocrConfidence >= 60
+                  ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800'
+                  : 'bg-red-900/30 text-red-400 border-red-800'"
+            >
+              {{ ocrConfidence }}% confidence
+            </span>
+            <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
+              Complete
+            </span>
+          </div>
         </div>
         <pre class="text-sm whitespace-pre-wrap text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-black p-4 rounded-lg">{{ ocrText }}</pre>
       </div>
