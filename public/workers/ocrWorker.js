@@ -34,8 +34,7 @@ async function getScheduler() {
   // Using 'eng' only — add 'eng+hin' once hin.traineddata.gz is confirmed present
   // Download Hindi: https://github.com/tesseract-ocr/tessdata_fast/raw/main/hin.traineddata
   const worker = await Tesseract.createWorker('eng', 1, {
-    langPath: '/tesseract/lang-data',
-    logger: m => {
+    langPath: self.location.origin + '/tesseract/lang-data',    logger: m => {
       if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
         postMessage({ type: 'progress', progress: 0.1, status: m.status })
       }
