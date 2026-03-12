@@ -6,7 +6,7 @@
 .cache
 dist
 public/models/
-tesseract/lang-data
+public/tesseract/lang-data
 *.onnx
 # Node dependencies
 node_modules
