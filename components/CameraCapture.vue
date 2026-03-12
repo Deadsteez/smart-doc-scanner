@@ -356,12 +356,12 @@ function clearImages() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-black text-white">
-    <div class="p-6 max-w-4xl mx-auto space-y-5">
+  <!-- <div class="min-h-screen bg-black text-white"> -->
+    <div class="p-6 max-w-3xl mx-auto space-y-5 w-full">
 
       <!-- Page header -->
       <div class="mb-2">
-        <h1 class="text-2xl font-semibold mb-1">Scan Document</h1>
+        <!-- <h1 class="text-2xl font-semibold mb-1">Scan Document</h1> -->
         <p class="text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
       </div>
 
@@ -560,5 +560,5 @@ function clearImages() {
       </div>
 
     </div>
-  </div>
+  <!-- </div> -->
 </template>
