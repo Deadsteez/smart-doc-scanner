@@ -353,11 +353,26 @@ function clearImages() {
   saveError.value = null
   captureError.value = null
 }
+
+
+const showCamera = ref(true)
+
+async function toggleCamera() {
+  if (stream.value?.active) {
+    stopCamera()
+    stream.value = null
+    showCamera.value = false
+  } else {
+    showCamera.value = true
+    await startCamera()
+  }
+}
+
 </script>
 
 <template>
   <!-- <div class="min-h-screen bg-black text-white"> -->
-    <div class="p-6 max-w-3xl mx-auto space-y-5 w-full">
+    <div class="w-full p-6 max-w-4xl space-y-5 ">
 
       <!-- Page header -->
       <div class="mb-2">
@@ -366,77 +381,87 @@ function clearImages() {
       </div>
 
       <!-- ── Camera Card ── -->
-      <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <!-- ── Camera Card ── -->
+<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
 
-        <!-- Camera error -->
-        <div
-          v-if="cameraError"
-          class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2"
-        >
-          <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-          </svg>
-          {{ cameraError }}
-        </div>
+  <!-- Toggle header -->
+  <div class="flex items-center justify-between px-4 pt-4 pb-2">
+    <p class="text-sm font-medium text-gray-300">Camera</p>
+<button
+  @click="toggleCamera"
+  class="text-xs px-3 py-1.5 rounded-lg border transition-colors"
+  :class="showCamera
+    ? 'border-red-800 text-red-400 hover:border-red-600'
+    : 'border-green-800 text-green-400 hover:border-green-600'"
+>
+  {{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
+</button>
+  </div>
 
-        <!-- Video feed -->
-        <div class="relative bg-black">
-          <video
-            ref="videoEl"
-            class="w-full max-h-[360px] object-cover block"
-            autoplay
-            playsinline
-            muted
-          />
-          <!-- Live indicator -->
-          <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
-            <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-            <span class="text-white text-xs font-medium">LIVE</span>
-          </div>
-        </div>
+  <!-- Camera error -->
+  <div
+    v-if="cameraError"
+    class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2"
+  >
+    <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+    </svg>
+    {{ cameraError }}
+  </div>
 
-        <!-- Capture error -->
-        <div
-          v-if="captureError"
-          class="mx-4 mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-sm text-yellow-400"
-        >
-          {{ captureError }}
-        </div>
+  <!-- Video feed — toggled -->
+  <div v-show="showCamera" class="relative bg-black">
+    <video
+      ref="videoEl"
+      class="w-full max-h-[360px] object-cover block"
+      autoplay
+      playsinline
+      muted
+    />
+    <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
+      <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+      <span class="text-white text-xs font-medium">LIVE</span>
+    </div>
+  </div>
 
-        <!-- Action buttons -->
-        <div class="p-4 flex gap-3">
-          <!-- Capture -->
-          <button
-            @click="captureFrame"
-            class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Capture Photo
-          </button>
+  <!-- Capture error -->
+  <div
+    v-if="captureError"
+    class="mx-4 mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-sm text-yellow-400"
+  >
+    {{ captureError }}
+  </div>
 
-          <!-- Upload — styled button, hidden real input -->
-          <button
-            @click="triggerFileInput"
-            class="flex-1 bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-gray-700"
-          >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-            </svg>
-            Upload Photo
-          </button>
-
-          <input
-            ref="fileInputEl"
-            type="file"
-            accept="image/*"
-            class="hidden"
-            @change="handleFileUpload"
-          />
-        </div>
-      </div>
+  <!-- Action buttons -->
+  <div class="p-4 flex gap-3">
+    <button
+      @click="captureFrame"
+      class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      Capture Photo
+    </button>
+    <button
+      @click="triggerFileInput"
+      class="flex-1 bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-gray-700"
+    >
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+      </svg>
+      Upload Photo
+    </button>
+    <input
+      ref="fileInputEl"
+      type="file"
+      accept="image/*"
+      class="hidden"
+      @change="handleFileUpload"
+    />
+  </div>
+</div>
 
       <!-- ── Saving indicator ── -->
       <div

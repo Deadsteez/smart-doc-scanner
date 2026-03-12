@@ -2,6 +2,8 @@
 import { onMounted, computed, ref } from 'vue'
 import { useDocumentStore } from '~/stores/documentStore'
 import { exportDocumentsToCSV } from '~/services/exportCsv'
+import AppNavbar from '~/components/AppNavbar.vue'
+
 
 const documentStore = useDocumentStore()
 
@@ -47,18 +49,12 @@ function categoryClass(category) {
 
 <template>
   <div class="min-h-screen bg-black text-white">
+    <AppNavbar />
     <div class="p-6 max-w-6xl mx-auto">
-
-      <!-- Navigation -->
-      <nav class="mb-8 flex gap-6 text-blue-400 text-sm">
-        <NuxtLink to="/" class="hover:underline">Dashboard</NuxtLink>
-        <NuxtLink to="/scan" class="hover:underline">Scan</NuxtLink>
-      </nav>
 
       <!-- Header -->
       <div class="flex justify-between items-center mb-6">
         <h1 class="text-2xl font-semibold">Scanned Documents</h1>
-
         <button
           class="bg-green-600/90 hover:bg-green-600 px-4 py-2 rounded text-sm transition"
           @click="exportDocumentsToCSV(documents)"
@@ -66,6 +62,7 @@ function categoryClass(category) {
           Export CSV
         </button>
       </div>
+
 
       <!-- Search + Filter -->
       <div class="flex gap-4 mb-8">

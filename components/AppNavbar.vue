@@ -17,12 +17,12 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <nav class="w-full border-b border-gray-800 bg-black px-6 py-3 flex items-center justify-between">
+<nav class="w-full border-b border-gray-800 bg-black px-6 py-3 flex items-center justify-between sticky top-0 z-50">
 
     <!-- Left: brand + links -->
 <div class="flex items-center gap-6">
-  <span class="text-white font-semibold tracking-tight text-sm">
-    📄 SmartScan
+  <span class="text-white font-bold tracking-tight text-sm">
+     SmartScan 🔍
   </span>
   <NuxtLink
     to="/"

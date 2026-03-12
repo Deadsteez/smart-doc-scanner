@@ -2,6 +2,9 @@
 import { getSupabase } from '~/services/supabaseClient'
 
 export default defineNuxtRouteMiddleware(async (to) => {
+
+      if (import.meta.server) return
+
   const supabase = getSupabase()
   const { data } = await supabase.auth.getSession()
 
