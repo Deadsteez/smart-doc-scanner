@@ -22,7 +22,13 @@ const captureError = ref(null)
 const isSaving = ref(false)
 const isSaved = ref(false)
 const saveError = ref(null)
-const nlpStatus = ref(null)   // shows NLP pipeline stage to user
+const nlpStatus = ref(null)
+
+// ── NLP job queue — prevents race conditions on rapid uploads ─
+const nlpReady = ref(false)        // true once models are loaded
+const nlpBusy = ref(false)         // true while a job is running
+const nlpQueue = []                // pending jobs waiting for worker
+const currentNlpJob = ref(null)    // job currently being processed
 
 // ─── Workers ──────────────────────────────────────────────────
 let preprocessWorker = null
@@ -63,7 +69,6 @@ onMounted(() => {
 
     if (msg.type !== 'result') return
 
-    // Worker now returns text, rawText, confidence, words
     ocrText.value = msg.text
     ocrConfidence.value = msg.confidence ? Math.round(msg.confidence) : null
     ocrProgress.value = 100
@@ -74,36 +79,61 @@ onMounted(() => {
     ocrProgress.value = 0
   }
 
-  // NLP worker — Transformers.js NER + zero-shot classifier
+  // ── NLP worker — initialize with ready-state tracking ────────
+  // nlpReady gates any postMessage calls until models are loaded.
+  // nlpQueue holds jobs that arrived before models were ready.
   nlpWorker = new NlpWorker()
+
   nlpWorker.onmessage = async (e) => {
     const msg = e.data
 
     if (msg.type === 'progress') {
       nlpStatus.value = msg.status
+
+      // Models fully loaded — drain any queued jobs
+      if (msg.stage === 'ready') {
+        nlpReady.value = true
+        console.log('[CameraCapture] NLP ready, draining queue:', nlpQueue.length)
+        while (nlpQueue.length > 0) {
+          const job = nlpQueue.shift()
+          nlpWorker.postMessage(job)
+        }
+      }
       return
     }
 
     if (msg.type === 'error') {
       console.error('[NLP] Error:', msg.error)
       nlpStatus.value = null
-      // NLP failed — still save with regex fallback fields
-      await saveDocumentFallback(pendingOcrText.value, pendingCvFeatures.value)
+      nlpBusy.value = false
+      // Use the job at front of processing slot
+      const job = currentNlpJob.value
+      if (job) {
+        await saveDocumentFallback(job.text, job.cvFeatures)
+        currentNlpJob.value = null
+      }
+      processNextNlpJob()
       return
     }
 
     if (msg.type === 'result') {
       nlpStatus.value = null
-      await saveDocumentWithNlp(
-        pendingOcrText.value,
-        msg.extracted,
-        msg.category
-      )
+      nlpBusy.value = false
+      const job = currentNlpJob.value
+      if (job) {
+        await saveDocumentWithNlp(job.text, msg.extracted, msg.category)
+        currentNlpJob.value = null
+      }
+      processNextNlpJob()
     }
   }
+
   nlpWorker.onerror = (err) => {
     console.error('NLP worker error:', err)
     nlpStatus.value = null
+    nlpBusy.value = false
+    currentNlpJob.value = null
+    processNextNlpJob()
   }
 
   startCamera()
@@ -202,11 +232,41 @@ function runOCR() {
   ocrWorker.postMessage({ image: processedImage.value })
 }
 
-// ─── Pending data shared between OCR and NLP workers ─────────
-const pendingOcrText = ref(null)
-const pendingCvFeatures = ref(null)
+// ─── NLP job queue helpers ────────────────────────────────────
+function enqueueNlpJob(text, cvFeatures) {
+  const job = { text, cvFeatures }
 
-// ─── Save to Dexie + Supabase (called after NLP completes) ───
+  if (!nlpReady.value) {
+    // Models still loading — queue the job, will be drained on 'ready'
+    console.log('[CameraCapture] NLP not ready yet, queuing job')
+    nlpQueue.push(job)
+    return
+  }
+
+  if (nlpBusy.value) {
+    // Worker busy with another job — queue this one
+    console.log('[CameraCapture] NLP busy, queuing job. Queue length:', nlpQueue.length)
+    nlpQueue.push(job)
+    return
+  }
+
+  // Worker ready and free — send immediately
+  dispatchNlpJob(job)
+}
+
+function dispatchNlpJob(job) {
+  nlpBusy.value = true
+  currentNlpJob.value = job
+  nlpWorker.postMessage({ text: job.text, cvFeatures: job.cvFeatures })
+}
+
+function processNextNlpJob() {
+  if (nlpQueue.length === 0) return
+  const next = nlpQueue.shift()
+  dispatchNlpJob(next)
+}
+
+// ─── Save pipeline ────────────────────────────────────────────
 async function saveDocument(rawText) {
   if (!isValidOcrOutput(rawText)) {
     console.warn('OCR output too noisy, skipping save')
@@ -216,18 +276,14 @@ async function saveDocument(rawText) {
 
   isSaving.value = true
   saveError.value = null
-  nlpStatus.value = 'Extracting fields...'
+  nlpStatus.value = nlpReady.value ? 'Extracting fields...' : 'Loading NLP models...'
 
   try {
     const cleanedText = cleanOcrText(rawText)
     const cvFeatures = await extractCvFeatures(processedImage.value)
 
-    // Store for use by nlpWorker message handler
-    pendingOcrText.value = cleanedText
-    pendingCvFeatures.value = cvFeatures
-
-    // Send to NLP worker — response handled in nlpWorker.onmessage
-    nlpWorker.postMessage({ text: cleanedText, cvFeatures })
+    // Enqueue — handles not-ready and busy states automatically
+    enqueueNlpJob(cleanedText, cvFeatures)
 
   } catch (err) {
     console.error('Pipeline error:', err)
@@ -245,8 +301,8 @@ async function saveDocumentWithNlp(cleanedText, extracted, category) {
       image: processedImage.value,
       ocrText: ocrText.value,
       cleanedText,
-      extracted,   // full NLP-extracted fields: vendor, date, total, tax, items, paymentMethod
-      category,    // NLP + CV blended classification
+      extracted,
+      category,
       synced: false,
     })
     isSaved.value = true
@@ -255,6 +311,7 @@ async function saveDocumentWithNlp(cleanedText, extracted, category) {
     saveError.value = 'Failed to save: ' + err.message
   } finally {
     isSaving.value = false
+    nlpStatus.value = null
   }
 }
 
@@ -281,6 +338,7 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
     saveError.value = 'Failed to save: ' + err.message
   } finally {
     isSaving.value = false
+    nlpStatus.value = null
   }
 }
 

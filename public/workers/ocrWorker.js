@@ -31,9 +31,8 @@ async function getScheduler() {
 
   scheduler = Tesseract.createScheduler()
 
-  // Do NOT pass workerPath/corePath/langPath when already inside a Web Worker
-  // — Tesseract resolves these itself relative to tesseract.min.js location.
-  // Only pass langPath if your traineddata is in a non-default location.
+  // Using 'eng' only — add 'eng+hin' once hin.traineddata.gz is confirmed present
+  // Download Hindi: https://github.com/tesseract-ocr/tessdata_fast/raw/main/hin.traineddata
   const worker = await Tesseract.createWorker('eng', 1, {
     langPath: '/tesseract/lang-data',
     logger: m => {
@@ -43,32 +42,11 @@ async function getScheduler() {
     }
   })
 
-  // ── Critical Tesseract parameters ────────────────────────────
   await worker.setParameters({
-    // OEM 1 = LSTM neural net only (fastest + most accurate for printed text)
-    // OEM 0 = Legacy only, OEM 2 = Both (slowest), OEM 3 = Default (auto)
-    tessedit_ocr_engine_mode: '1',
-
-    // PSM 6 = Assume a single uniform block of text
-    // PSM 4 = Assume a single column — good for receipts
-    // PSM 11 = Sparse text — good for mixed layouts
-    // PSM 3 = Fully automatic (default, slower)
-    // Using PSM 4 for receipts/invoices — single column dominant layout
-    tessedit_pageseg_mode: '4',
-
-    // Whitelist: only characters that appear on financial documents
-    // Removes garbage recognition of unlikely symbols
-    tessedit_char_whitelist:
-      'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz' +
-      '0123456789' +
-      ' .,:-/\\()@#$%&*+\'\"=_\n\r\t',
-
-    // Preserve interword spaces — critical for reading amounts and dates
+    // PSM 3 = fully automatic — best for mixed layouts
+    tessedit_pageseg_mode: '3',
     preserve_interword_spaces: '1',
-
-    // Minimum confidence threshold — skip low-confidence words
-    // Range 0-100, words below this are treated as spaces
-    tessedit_minimal_confidence: '40',
+    tessedit_minimal_confidence: '30',
   })
 
   scheduler.addWorker(worker)

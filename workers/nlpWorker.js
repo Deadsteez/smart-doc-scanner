@@ -1,77 +1,81 @@
 // workers/nlpWorker.js
-// Place this file at: workers/nlpWorker.js (NOT in /public/)
-// Vite handles the bundling — imports work normally here
-// In CameraCapture.vue load it as:
+// Place at: workers/nlpWorker.js (NOT in /public/)
+// Load in CameraCapture.vue as:
 //   import NlpWorker from '~/workers/nlpWorker.js?worker'
-//   nlpWorker = new NlpWorker()
 
 import { pipeline, env } from '@xenova/transformers'
 
 console.log('[NLP Worker] Starting...')
 
-// ─── Point to local models — fully offline ────────────────────
-env.allowRemoteModels = false
-env.allowLocalModels = true
+// ─── Model config ─────────────────────────────────────────────
 env.localModelPath = '/models/'
 env.cacheDir = '/models/'
+env.allowRemoteModels = true   // fallback to CDN if local missing
+env.allowLocalModels = true
+
+console.log('[NLP Worker] Model path:', env.localModelPath)
 
 const MODEL_OPTIONS = { quantized: true }
 
-// ─── Persistent pipelines ─────────────────────────────────────
 let nerPipeline = null
 let classifierPipeline = null
-let isInitializing = false
 
-async function getPipelines() {
-  if (nerPipeline && classifierPipeline) return { nerPipeline, classifierPipeline }
+// ─── Load models immediately on worker start ──────────────────
+// KEY FIX: Don't wait for first message — start loading now so
+// models are ready (or nearly ready) when OCR finishes.
+const initPromise = loadPipelines()
 
-  if (isInitializing) {
-    await new Promise(resolve => {
-      const check = setInterval(() => {
-        if (!isInitializing) { clearInterval(check); resolve() }
-      }, 100)
-    })
-    return { nerPipeline, classifierPipeline }
+async function loadPipelines() {
+  try {
+    postMessage({ type: 'progress', stage: 'ner', progress: 0.1, status: 'Loading NER model...' })
+    console.log('[NLP Worker] Loading NER pipeline...')
+
+    nerPipeline = await pipeline(
+      'token-classification',
+      'Xenova/bert-base-NER',
+      {
+        ...MODEL_OPTIONS,
+        aggregation_strategy: 'simple',
+        progress_callback: (p) => {
+          console.log('[NLP Worker] NER:', p.status, p.file ?? '', p.progress != null ? p.progress.toFixed(0) + '%' : '')
+          if (p.status === 'downloading') {
+            postMessage({ type: 'progress', stage: 'ner', progress: 0.2, status: `Downloading NER... ${p.progress?.toFixed(0) ?? ''}%` })
+          } else if (p.status === 'loading') {
+            postMessage({ type: 'progress', stage: 'ner', progress: 0.35, status: 'Loading NER model...' })
+          }
+        }
+      }
+    )
+    console.log('[NLP Worker] NER ready ✅')
+
+    postMessage({ type: 'progress', stage: 'classifier', progress: 0.5, status: 'Loading classifier...' })
+    console.log('[NLP Worker] Loading classifier pipeline...')
+
+    classifierPipeline = await pipeline(
+      'zero-shot-classification',
+      'Xenova/nli-deberta-v3-small',
+      {
+        ...MODEL_OPTIONS,
+        progress_callback: (p) => {
+          console.log('[NLP Worker] Classifier:', p.status, p.file ?? '', p.progress != null ? p.progress.toFixed(0) + '%' : '')
+          if (p.status === 'downloading') {
+            postMessage({ type: 'progress', stage: 'classifier', progress: 0.7, status: `Downloading classifier... ${p.progress?.toFixed(0) ?? ''}%` })
+          } else if (p.status === 'loading') {
+            postMessage({ type: 'progress', stage: 'classifier', progress: 0.85, status: 'Loading classifier...' })
+          }
+        }
+      }
+    )
+    console.log('[NLP Worker] Classifier ready ✅')
+
+    // Signal CameraCapture — queue will now drain
+    postMessage({ type: 'progress', stage: 'ready', progress: 1.0, status: 'NLP ready' })
+    console.log('[NLP Worker] All models loaded ✅')
+
+  } catch (err) {
+    console.error('[NLP Worker] Model load failed:', err)
+    postMessage({ type: 'error', error: 'Failed to load NLP models: ' + String(err) })
   }
-
-  isInitializing = true
-
-  postMessage({ type: 'progress', stage: 'ner', progress: 0.1, status: 'Loading NER model...' })
-
-  nerPipeline = await pipeline(
-    'token-classification',
-    'Xenova/bert-base-NER',
-    {
-      ...MODEL_OPTIONS,
-      aggregation_strategy: 'simple',
-      progress_callback: (p) => {
-        if (p.status === 'loading') {
-          postMessage({ type: 'progress', stage: 'ner', progress: 0.2, status: 'Loading NER...' })
-        }
-      }
-    }
-  )
-
-  postMessage({ type: 'progress', stage: 'classifier', progress: 0.5, status: 'Loading classifier...' })
-
-  classifierPipeline = await pipeline(
-    'zero-shot-classification',
-    'Xenova/nli-deberta-v3-small',
-    {
-      ...MODEL_OPTIONS,
-      progress_callback: (p) => {
-        if (p.status === 'loading') {
-          postMessage({ type: 'progress', stage: 'classifier', progress: 0.7, status: 'Loading classifier...' })
-        }
-      }
-    }
-  )
-
-  postMessage({ type: 'progress', stage: 'ready', progress: 1.0, status: 'NLP ready' })
-  isInitializing = false
-  console.log('[NLP Worker] Pipelines ready')
-
-  return { nerPipeline, classifierPipeline }
 }
 
 // ─── Message handler ──────────────────────────────────────────
@@ -82,15 +86,21 @@ self.onmessage = async (e) => {
     return
   }
 
-  console.log('[NLP Worker] Processing, length:', text.length)
+  console.log('[NLP Worker] Job received, text length:', text.length)
 
   try {
-    const { nerPipeline, classifierPipeline } = await getPipelines()
+    // Wait for models if still loading
+    await initPromise
+
+    if (!nerPipeline || !classifierPipeline) {
+      throw new Error('Pipelines not initialized after init')
+    }
 
     postMessage({ type: 'progress', stage: 'ner', progress: 0.3, status: 'Extracting fields...' })
 
     const truncated = text.slice(0, 2000)
     const entities = await nerPipeline(truncated)
+    console.log('[NLP Worker] Entities found:', entities.length)
 
     const extracted = extractFields(text, entities)
 
@@ -114,7 +124,7 @@ self.onmessage = async (e) => {
     })
 
   } catch (err) {
-    console.error('[NLP Worker] Error:', err)
+    console.error('[NLP Worker] Job error:', err)
     postMessage({ type: 'error', error: String(err) })
   }
 }
@@ -137,7 +147,6 @@ function extractFields(text, entities) {
     text.match(/\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\b/) ||
     text.match(/\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i) ||
     text.match(/\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/i)
-
   const date = dateEntity?.word ?? dateRegex?.[1]
 
   const moneyEntities = entities
@@ -195,7 +204,6 @@ function extractLineItems(lines) {
   return items.slice(0, 20)
 }
 
-// ─── Classification ───────────────────────────────────────────
 function combineClassification(nlpResult, cvFeatures) {
   const nlpScores = {}
   for (let i = 0; i < nlpResult.labels.length; i++) {
@@ -223,7 +231,6 @@ function combineClassification(nlpResult, cvFeatures) {
   const [topLabel, topScore] = entries[0]
   const total = entries.reduce((s, [, v]) => s + v, 0)
   const confidence = total > 0 ? topScore / total : 0
-
   const typeMap = { invoice: 'invoice', receipt: 'receipt', bank_statement: 'other', other: 'other' }
 
   return {

@@ -5,42 +5,66 @@
  * @returns Cleaned text
  */
 export function cleanOcrText(raw: string, preserveTables: boolean = true): string {
-    if (!raw || !raw.trim()) {
-        return ''
-    }
+  if (!raw || !raw.trim()) return ''
 
-    let cleaned = raw
-        .replace(/[~_]{2,}/g, ' ')
-        .replace(/[^\S\r\n]+/g, ' ')
-        .replace(/[""]/g, '"')
-        .replace(/['']/g, "'")
-        .replace(/[–—]/g, '-')
-        .replace(/[…]/g, '...')
-        .replace(/\b0([A-Z]{2,})\b/g, 'O$1')
-        .replace(/\bO(\d+)\b/g, '0$1')
-        .replace(/\b([A-Z])l([A-Z])\b/g, '$1I$2')
-        .replace(/\bl([A-Z]{2,})/g, 'I$1')
-        .replace(/([a-z])1([a-z])/g, '$1l$2')
-        .replace(/\$\s+(\d)/g, '$$1')              
-        .replace(/(\d)\s*,\s*(\d{3})/g, '$1,$2')
-        .replace(/\s*\|\s*/g, preserveTables ? ' | ' : ' ')
-        .replace(/\.{3,}/g, '...')
-        .replace(/([.!?])\1{2,}/g, '$1')
-        .replace(/\s+([.,;:!?])/g, '$1')
-        .replace(/\n{3,}/g, '\n\n')
-        .replace(/\s{2,}/g, ' ')
-        .trim()
+  let cleaned = raw
+    // Fix common OCR symbol noise
+    .replace(/[~_]{2,}/g, ' ')
+    // Normalize unicode quotes and dashes
+    .replace(/[""]/g, '"')
+    .replace(/['']/g, "'")
+    .replace(/[–—]/g, '-')
+    .replace(/[…]/g, '...')
+    // Fix common OCR letter/number confusions
+    .replace(/\b0([A-Z]{2,})\b/g, 'O$1')
+    .replace(/\bO(\d+)\b/g, '0$1')
+    .replace(/\b([A-Z])l([A-Z])\b/g, '$1I$2')
+    .replace(/\bl([A-Z]{2,})/g, 'I$1')
+    .replace(/([a-z])1([a-z])/g, '$1l$2')
+    // Fix currency spacing
+    .replace(/\$\s+(\d)/g, '$$1')
+    .replace(/₹\s+(\d)/g, '₹$1')
+    // Fix number formatting
+    .replace(/(\d)\s*,\s*(\d{3})/g, '$1,$2')
+    // Normalize table separators
+    .replace(/\s*\|\s*/g, preserveTables ? ' | ' : ' ')
+    // Clean up punctuation spacing
+    .replace(/\.{3,}/g, '...')
+    .replace(/([.!?])\1{2,}/g, '$1')
+    .replace(/\s+([.,;:!?])/g, '$1')
+    // Normalize horizontal whitespace per line — but PRESERVE newlines
+    // (collapsing newlines destroys line-item structure needed for field extraction)
+    .split('\n')
+    .map(line => line.replace(/[^\S\n]+/g, ' ').trim())
+    .filter(line => line.length > 0)
+    // Collapse 3+ consecutive blank lines to 2 max
+    .reduce((acc: string[], line) => {
+      const trailingBlanks = acc.slice(-2).filter(l => l === '').length
+      if (line === '' && trailingBlanks >= 2) return acc
+      acc.push(line)
+      return acc
+    }, [])
+    .join('\n')
+    .trim()
 
-    return cleaned
+  return cleaned
 }
 
 export function isValidOcrOutput(text: string): boolean {
-    if (!text || text.trim().length < 10) return false
-    
-    const alphanumericRatio = (text.match(/[a-zA-Z0-9]/g) || []).length / text.length
-    if (alphanumericRatio < 0.5) return false
-    
-    return true
+  if (!text || text.trim().length < 10) return false
+
+  const stripped = text.replace(/\s/g, '')
+
+  // Need at least 10 non-whitespace characters
+  if (stripped.length < 10) return false
+
+  // Measure alphanumeric ratio against non-whitespace chars only.
+  // Old approach used total text length — sparse receipts/invoices have
+  // 60%+ whitespace so the ratio always failed even on clean OCR output.
+  const alphanumericRatio = (stripped.match(/[a-zA-Z0-9]/g) || []).length / stripped.length
+  if (alphanumericRatio < 0.3) return false  // lowered from 0.5 — allows currency symbols, punctuation
+
+  return true
 }
 
 export function extractOcrPatterns(text: string) {
