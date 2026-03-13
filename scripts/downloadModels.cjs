@@ -1,6 +1,5 @@
-// scripts/downloadModels.cjs
-// Run: node scripts/downloadModels.cjs
-// Pure CJS — uses dynamic import() to load ESM @xenova/transformers
+
+//  uses dynamic import() to load ESM @xenova/transformers
 
 const path = require('path')
 const fs = require('fs')
@@ -21,7 +20,7 @@ async function main() {
   env.allowRemoteModels = true
   env.allowLocalModels = true
 
-  console.log('\n📦 Downloading models to:', PUBLIC_MODELS_DIR)
+  console.log('\n Downloading models to:', PUBLIC_MODELS_DIR)
   console.log('This runs once — models work fully offline after.\n')
 
   const models = [
@@ -38,7 +37,7 @@ async function main() {
   ]
 
   for (const { task, model, label } of models) {
-    console.log(`⬇️  ${label}`)
+    console.log(`⬇ ${label}`)
     console.log(`   Model: ${model}`)
 
     try {
@@ -53,7 +52,7 @@ async function main() {
           }
         }
       })
-      console.log(`✅ ${label} ready\n`)
+      console.log(` ${label} ready\n`)
     } catch (err) {
       console.error(`\n❌ Failed: ${label}`)
       console.error('   Error:', err.message)
@@ -62,8 +61,8 @@ async function main() {
   }
 
   console.log('━'.repeat(50))
-  console.log('✅ All models saved to /public/models/')
-  console.log('📱 App will work fully offline on mobile.\n')
+  console.log(' All models saved to /public/models/')
+  console.log(' App will work fully offline on mobile.\n')
 }
 
 main().catch(err => {

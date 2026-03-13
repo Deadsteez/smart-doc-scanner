@@ -13,8 +13,7 @@ const handleRegister = async () => {
   message.value = ''
   loading.value = true
 
-  // Supabase returns { data, error } at the top level.
-  // Destructure correctly — don't use the returned object as-is.
+  // Supabase returns { data, error } .
   const { data, error } = await register(email.value, password.value)
 
   loading.value = false

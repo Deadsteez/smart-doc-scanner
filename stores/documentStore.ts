@@ -9,7 +9,7 @@ export const useDocumentStore = defineStore('documents', () => {
   const syncing = ref(false)
   const syncError = ref<string | null>(null)
 
-  // ─── Helpers ─────────────────────────────────────────────────
+  //Helpers 
 
   async function getCurrentUserId(): Promise<string | null> {
     try {
@@ -28,14 +28,14 @@ export const useDocumentStore = defineStore('documents', () => {
       .toArray()
   }
 
-  // ─── Load ────────────────────────────────────────────────────
+  //  Load
 
   async function loadAll() {
     await reloadLocal()
     await pullFromSupabase()
   }
 
-  // ─── Pull from Supabase ──────────────────────────────────────
+  // Pull from Supabase 
 
   async function pullFromSupabase() {
     const userId = await getCurrentUserId()
@@ -93,7 +93,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // ─── Add ─────────────────────────────────────────────────────
+  // Add 
 
   async function add(doc: Omit<DocumentRecord, 'id' | 'supabaseId'>) {
     const userId = await getCurrentUserId()
@@ -111,7 +111,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // ─── Push to Supabase ────────────────────────────────────────
+  // Push to Supabase 
 
   async function pushToSupabase(localId: number, userId: string) {
     syncing.value = true
@@ -168,7 +168,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // ─── Sync pending ────────────────────────────────────────────
+  // Sync pending 
 
   async function syncPending() {
     const userId = await getCurrentUserId()
@@ -183,7 +183,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // ─── Remove ──────────────────────────────────────────────────
+  // Remove 
 
   async function remove(id: number) {
     const record = await db.documents.get(id)
@@ -201,7 +201,7 @@ export const useDocumentStore = defineStore('documents', () => {
     await reloadLocal()
   }
 
-  // ─── Getters ─────────────────────────────────────────────────
+  // Getters 
 
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => b.createdAt - a.createdAt)

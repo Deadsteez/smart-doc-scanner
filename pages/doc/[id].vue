@@ -6,7 +6,7 @@ import { useDocumentStore } from '~/stores/documentStore'
 const route = useRoute()
 const documentStore = useDocumentStore()
 
-// renamed from `document` — avoids shadowing the global browser document object
+//avoids shadowing the global browser document object
 const doc = ref(null)
 
 onMounted(async () => {
@@ -18,7 +18,7 @@ onMounted(async () => {
 
 const extracted = computed(() => doc.value?.extracted || {})
 
-// category is now an object { type, confidence, scores } — not a plain string
+// category is an object { type, confidence, scores } 
 const categoryType = computed(() => doc.value?.category?.type ?? 'other')
 const categoryConfidence = computed(() =>
   doc.value?.category?.confidence

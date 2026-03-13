@@ -1,5 +1,4 @@
-// public/workers/preprocessWorker.js
-// Optimized OpenCV preprocessing pipeline for financial document OCR
+// OpenCV preprocessing pipeline for financial document OCR
 
 let cvLoaded = false
 
@@ -53,7 +52,7 @@ self.onmessage = async (e) => {
   }
 }
 
-// ─── Full preprocessing pipeline ─────────────────────────────
+//  Full preprocessing pipeline 
 async function preprocess(dataURL) {
   // 1. Decode image
   const res = await fetch(dataURL)
@@ -159,7 +158,7 @@ async function preprocess(dataURL) {
 
     console.log(`[Preprocess Worker] Output: ${finalW}x${finalH}`)
 
-    // 11. Export as PNG (lossless — JPEG artifacts hurt OCR accuracy)
+    // 11. Export as PNG (JPEG artifacts hurt OCR accuracy)
     const processedBlob = await outCanvas.convertToBlob({ type: 'image/png' })
     const reader = new FileReader()
     return new Promise((resolve) => {
@@ -168,7 +167,7 @@ async function preprocess(dataURL) {
     })
 
   } finally {
-    // Always clean up OpenCV Mats to prevent memory leaks
+    // prevent memory leaks
     src.delete()
     gray.delete()
     denoised.delete()
@@ -178,7 +177,7 @@ async function preprocess(dataURL) {
   }
 }
 
-// ─── Deskew ───────────────────────────────────────────────────
+//  Deskew 
 // Finds the dominant text angle and rotates the image to correct it.
 // Improves Tesseract line segmentation significantly on tilted captures.
 function deskewImage(binaryMat) {

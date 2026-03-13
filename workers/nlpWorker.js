@@ -1,13 +1,12 @@
-// workers/nlpWorker.js
-// Place at: workers/nlpWorker.js (NOT in /public/)
+
 // Load in CameraCapture.vue as:
-//   import NlpWorker from '~/workers/nlpWorker.js?worker'
+// import NlpWorker from '~/workers/nlpWorker.js?worker'
 
 import { pipeline, env } from '@xenova/transformers'
 
 console.log('[NLP Worker] Starting...')
 
-// ─── Model config ─────────────────────────────────────────────
+// Model config
 env.localModelPath = '/models/'
 env.cacheDir = '/models/'
 env.allowRemoteModels = true   // fallback to CDN if local missing
@@ -20,8 +19,8 @@ const MODEL_OPTIONS = { quantized: true }
 let nerPipeline = null
 let classifierPipeline = null
 
-// ─── Load models immediately on worker start ──────────────────
-// KEY FIX: Don't wait for first message — start loading now so
+// Load models immediately on worker start 
+// Don't wait for first message — start loading now so
 // models are ready (or nearly ready) when OCR finishes.
 const initPromise = loadPipelines()
 
@@ -46,7 +45,7 @@ async function loadPipelines() {
         }
       }
     )
-    console.log('[NLP Worker] NER ready ✅')
+    console.log('[NLP Worker] NER ready ')
 
     postMessage({ type: 'progress', stage: 'classifier', progress: 0.5, status: 'Loading classifier...' })
     console.log('[NLP Worker] Loading classifier pipeline...')
@@ -66,11 +65,11 @@ async function loadPipelines() {
         }
       }
     )
-    console.log('[NLP Worker] Classifier ready ✅')
+    console.log('[NLP Worker] Classifier ready ')
 
     // Signal CameraCapture — queue will now drain
     postMessage({ type: 'progress', stage: 'ready', progress: 1.0, status: 'NLP ready' })
-    console.log('[NLP Worker] All models loaded ✅')
+    console.log('[NLP Worker] All models loaded ')
 
   } catch (err) {
     console.error('[NLP Worker] Model load failed:', err)
@@ -78,7 +77,7 @@ async function loadPipelines() {
   }
 }
 
-// ─── Message handler ──────────────────────────────────────────
+//Message handler
 self.onmessage = async (e) => {
   const { text, cvFeatures } = e.data
   if (!text?.trim()) {
@@ -129,7 +128,7 @@ self.onmessage = async (e) => {
   }
 }
 
-// ─── Field extraction ─────────────────────────────────────────
+//  Field extraction 
 function extractFields(text, entities) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
 

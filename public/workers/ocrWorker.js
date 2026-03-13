@@ -1,12 +1,11 @@
-// public/workers/ocrWorker.js
-// Optimized Tesseract.js worker — persistent scheduler, LSTM-only, tuned params
+
+// Tesseract.js worker — persistent scheduler, LSTM-only, tuned params
 
 console.log('[OCR Worker] Starting...')
 
 importScripts('/tesseract/tesseract.min.js')
 
-// ─── Persistent scheduler ────────────────────────────────────
-// KEY FIX: Create the scheduler ONCE and reuse it for every message.
+// Create the scheduler ONCE and reuse it for every message.
 // The old approach called Tesseract.recognize() directly which spins up
 // a brand new worker + loads the LSTM model on every single call (~3-8s overhead).
 // With a persistent scheduler the model loads once (~1-2s) and subsequent
@@ -31,8 +30,7 @@ async function getScheduler() {
 
   scheduler = Tesseract.createScheduler()
 
-  // Using 'eng' only — add 'eng+hin' once hin.traineddata.gz is confirmed present
-  // Download Hindi: https://github.com/tesseract-ocr/tessdata_fast/raw/main/hin.traineddata
+  // Using 'eng' only
   const worker = await Tesseract.createWorker('eng', 1, {
     langPath: '/tesseract/lang-data',
     logger: m => {
@@ -62,7 +60,7 @@ async function getScheduler() {
   return scheduler
 }
 
-// ─── Message handler ─────────────────────────────────────────
+// Message handler
 onmessage = async (e) => {
   const { image } = e.data
   if (!image) {
@@ -81,7 +79,7 @@ onmessage = async (e) => {
 
     postMessage({ type: 'progress', progress: 0.95, status: 'Processing results...' })
 
-    // ── Filter low-confidence words ───────────────────────────
+    // Filter low-confidence words 
     // Reconstruct text from word-level data, dropping garbage words
     let filteredText = result.data.text
 
@@ -109,7 +107,7 @@ onmessage = async (e) => {
   }
 }
 
-// ─── Build filtered text from word confidence data ────────────
+// Build filtered text from word confidence data 
 // Drops words below confidence threshold and reconstructs clean text
 function buildFilteredText(words, lines) {
   const CONFIDENCE_THRESHOLD = 40

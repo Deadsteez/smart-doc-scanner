@@ -17,7 +17,7 @@ const documents = computed(() => {
     const matchesSearch =
       (doc.cleanedText ?? '').toLowerCase().includes(searchQuery.value.toLowerCase())
 
-    // FIXED: category is now { type, confidence, scores } — not a plain string
+    // category is { type, confidence, scores } 
     const matchesCategory =
       selectedCategory.value === 'all' ||
       doc.category?.type === selectedCategory.value
@@ -33,7 +33,7 @@ function deleteDoc(id, event) {
   documentStore.remove(id)
 }
 
-// FIXED: receives category object, reads .type for the color lookup
+// receives category object, reads .type for the color lookup
 function categoryClass(category) {
   return {
     receipt:       'bg-blue-500/20 text-blue-400',
@@ -147,7 +147,7 @@ function categoryClass(category) {
                 :class="doc.synced ? 'bg-green-500' : 'bg-yellow-500'"
               ></span>
 
-              <!-- FIXED: display category.type not the whole category object -->
+              <!--display category.type not the whole category object -->
               <span
                 class="text-xs px-2 py-1 rounded uppercase tracking-wide"
                 :class="categoryClass(doc.category)"

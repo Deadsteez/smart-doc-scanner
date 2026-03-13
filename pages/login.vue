@@ -12,9 +12,7 @@ const handleLogin = async () => {
   errorMsg.value = ''
   loading.value = true
 
-  // Supabase returns { data, error } — NOT { error } at the top level.
-  // The old code did `const { error: err } = await login(...)` which always
-  // got undefined because the real error is nested inside the response object.
+  // Supabase returns { data, error } 
   const { data, error } = await login(email.value, password.value)
 
   loading.value = false
