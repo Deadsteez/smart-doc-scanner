@@ -3,6 +3,8 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { cleanOcrText, isValidOcrOutput } from '~/composables/useOcrCleanup'
 import { useDocumentStore } from '~/stores/documentStore'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
+import { usePdfProcessor } from '~/composables/usePdfProcessor'
+import PdfUploader from '~/components/scanner/PdfUploader.vue'
 // NLP worker loaded via Vite's ?worker syntax — handles ES module bundling automatically
 import NlpWorker from '~/workers/nlpWorker.js?worker'
 
@@ -23,6 +25,12 @@ const isSaving = ref(false)
 const isSaved = ref(false)
 const saveError = ref(null)
 const nlpStatus = ref(null)
+
+// ── PDF Support ──────────────────────────────────────────────
+const showPdfUploader = ref(false)
+const pdfPages = ref([])
+const currentPdfPageIndex = ref(0)
+const { isPdfFile } = usePdfProcessor()
 
 // ── NLP job queue — prevents race conditions on rapid uploads ─
 const nlpReady = ref(false)        // true once models are loaded
@@ -203,10 +211,49 @@ function triggerFileInput() {
 function handleFileUpload(event) {
   const file = event?.target?.files?.[0]
   if (!file) return
+  
+  // Check if it's a PDF
+  if (isPdfFile(file)) {
+    showPdfUploader.value = true
+    return
+  }
+  
+  // Handle regular image files
   const reader = new FileReader()
   reader.onload = (e) => processImage(e.target.result)
   reader.readAsDataURL(file)
   event.target.value = ''
+}
+
+// ─── PDF Handling ─────────────────────────────────────────────
+function handlePdfPagesSelected(pages) {
+  pdfPages.value = pages
+  currentPdfPageIndex.value = 0
+  showPdfUploader.value = false
+  
+  if (pages.length > 0) {
+    processImage(pages[0].image)
+  }
+}
+
+function handlePdfCancel() {
+  showPdfUploader.value = false
+  pdfPages.value = []
+  currentPdfPageIndex.value = 0
+}
+
+function processPreviousPdfPage() {
+  if (currentPdfPageIndex.value > 0) {
+    currentPdfPageIndex.value--
+    processImage(pdfPages.value[currentPdfPageIndex.value].image)
+  }
+}
+
+function processNextPdfPage() {
+  if (currentPdfPageIndex.value < pdfPages.value.length - 1) {
+    currentPdfPageIndex.value++
+    processImage(pdfPages.value[currentPdfPageIndex.value].image)
+  }
 }
 
 // ─── Shared preprocessing entry ───────────────────────────────
@@ -352,6 +399,10 @@ function clearImages() {
   isSaved.value = false
   saveError.value = null
   captureError.value = null
+  // Clear PDF data
+  pdfPages.value = []
+  currentPdfPageIndex.value = 0
+  showPdfUploader.value = false
 }
 </script>
 
@@ -425,16 +476,60 @@ function clearImages() {
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            Upload Photo
+            Upload Photo/PDF
           </button>
 
           <input
             ref="fileInputEl"
             type="file"
-            accept="image/*"
+            accept="image/*,.pdf,application/pdf"
             class="hidden"
             @change="handleFileUpload"
           />
+        </div>
+      </div>
+
+      <!-- ── PDF Uploader Modal ── -->
+      <div v-if="showPdfUploader" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <PdfUploader 
+            @pages-selected="handlePdfPagesSelected"
+            @cancel="handlePdfCancel"
+          />
+        </div>
+      </div>
+
+      <!-- ── PDF Page Navigation ── -->
+      <div v-if="pdfPages.length > 1" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-gray-400 text-sm font-medium">PDF Page Navigation</p>
+          <span class="text-xs text-gray-500">
+            Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}
+          </span>
+        </div>
+        
+        <div class="flex gap-3">
+          <button
+            @click="processPreviousPdfPage"
+            :disabled="currentPdfPageIndex === 0"
+            class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Previous Page
+          </button>
+          
+          <button
+            @click="processNextPdfPage"
+            :disabled="currentPdfPageIndex === pdfPages.length - 1"
+            class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+          >
+            Next Page
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </div>
 
