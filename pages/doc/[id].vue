@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDocumentStore } from '~/stores/documentStore'
+import { exportDocumentToPDF } from '~/services/exportPdf'
 
 const route = useRoute()
 const documentStore = useDocumentStore()
@@ -49,26 +50,39 @@ const categoryClass = computed(() => ({
 
       <div v-else class="space-y-6 mt-4">
 
-        <!-- Metadata row -->
-        <div class="flex items-center justify-between">
-          <span class="text-sm text-gray-400">
-            {{ new Date(doc.createdAt).toLocaleString() }}
-          </span>
-          <div class="flex items-center gap-2">
-            <span
-              class="text-xs px-2.5 py-1 rounded-full uppercase tracking-wide font-medium"
-              :class="categoryClass"
-            >
-              {{ categoryType }}
-            </span>
-            <span
-              v-if="categoryConfidence"
-              class="text-xs text-gray-500"
-            >
-              {{ categoryConfidence }} confidence
-            </span>
-          </div>
-        </div>
+       <!-- Metadata row -->
+<div class="flex items-center justify-between">
+  <span class="text-sm text-gray-400">
+    {{ new Date(doc.createdAt).toLocaleString() }}
+  </span>
+  <div class="flex items-center gap-3">
+    <button
+      @click="exportDocumentToPDF(doc)"
+      class="bg-red-600/90 hover:bg-red-600 px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5"
+      title="Export as PDF"
+    >
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      Export PDF
+    </button>
+    <div class="flex items-center gap-2">
+      <span
+        class="text-xs px-2.5 py-1 rounded-full uppercase tracking-wide font-medium"
+        :class="categoryClass"
+      >
+        {{ categoryType }}
+      </span>
+      <span
+        v-if="categoryConfidence"
+        class="text-xs text-gray-500"
+      >
+        {{ categoryConfidence }} confidence
+      </span>
+    </div>
+  </div>
+</div>
+
 
         <!-- Scanned Image -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">

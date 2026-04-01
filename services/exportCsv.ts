@@ -4,23 +4,31 @@ export function exportDocumentsToCSV(docs: DocumentRecord[]) {
   if (!docs.length) return
 
   const headers = [
-    'id',
-    'createdAt',
-    'category',
-    'vendor',
-    'date',
-    'total',
-    'receiptNumber'
+    'ID',
+    'Created At',
+    'Category',
+    'Confidence',
+    'Vendor',
+    'Date',
+    'Total',
+    'Tax',
+    'Receipt/Invoice Number',
+    'Payment Method',
+    'Items Count'
   ]
 
   const rows = docs.map(d => [
     d.id ?? '',
-    new Date(d.createdAt).toISOString(),
-    d.category,
-    d.extracted.vendor ?? '',
-    d.extracted.date ?? '',
-    d.extracted.total ?? '',
-    d.extracted.receiptNumber ?? ''
+    new Date(d.createdAt).toLocaleString(),
+    d.category?.type ?? '',
+    d.category?.confidence ? Math.round(d.category.confidence * 100) + '%' : '',
+    d.extracted?.vendor ?? '',
+    d.extracted?.date ?? '',
+    d.extracted?.total ?? '',
+    d.extracted?.tax ?? '',
+    d.extracted?.receiptNumber ?? '',
+    d.extracted?.paymentMethod ?? '',
+    d.extracted?.items?.length ?? 0
   ])
 
   const csv =
@@ -35,7 +43,8 @@ export function exportDocumentsToCSV(docs: DocumentRecord[]) {
 
   const link = document.createElement('a')
   link.href = url
-  link.setAttribute('download', 'documents.csv')
+  const timestamp = new Date().toISOString().split('T')[0]
+  link.setAttribute('download', `documents_${timestamp}.csv`)
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
