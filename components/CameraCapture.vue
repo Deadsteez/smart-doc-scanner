@@ -507,7 +507,7 @@ async function toggleCamera() {
     <input
       ref="fileInputEl"
       type="file"
-      accept="image/*"
+      accept="image/*,.pdf,application/pdf"
       class="hidden"
       @change="handleFileUpload"
     />

@@ -35,6 +35,7 @@ const categoryClass = computed(() => ({
 
 <template>
   <div class="min-h-screen bg-black text-white">
+    <AppNavbar />
     <div class="p-6 max-w-4xl mx-auto">
 
       <NuxtLink to="/" class="text-blue-400 hover:underline mb-6 inline-block text-sm">
@@ -99,8 +100,30 @@ const categoryClass = computed(() => ({
               <span class="block text-gray-500 text-xs mb-0.5">Receipt #</span>
               {{ extracted.receiptNumber || '—' }}
             </div>
+            <div>
+              <span class="block text-gray-500 text-xs mb-0.5">Tax</span>
+              {{ extracted.tax || '—' }}
+            </div>
+            <div>
+              <span class="block text-gray-500 text-xs mb-0.5">Payment Method</span>
+              {{ extracted.paymentMethod || '—' }}
+            </div>
           </div>
         </div>
+              <!-- Line Items -->
+      <div v-if="extracted.items && extracted.items.length > 0" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h2 class="font-semibold mb-3 text-gray-200">Line Items</h2>
+        <div class="space-y-2">
+          <div 
+            v-for="(item, index) in extracted.items" 
+            :key="index"
+            class="flex justify-between items-center text-sm border-b border-gray-800 pb-2 last:border-0"
+          >
+            <span class="text-gray-300">{{ item.description }}</span>
+            <span class="text-gray-100 font-medium">{{ item.amount }}</span>
+          </div>
+        </div>
+      </div>
 
         <!-- OCR Text -->
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">

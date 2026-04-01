@@ -1,86 +1,86 @@
-// PDF processing worker - converts PDF pages to images for OCR
+// public/workers/pdfWorker.js
+// Converts PDF pages to images for OCR pipeline
 
 console.log('[PDF Worker] Starting...')
 
-// Use locally installed pdfjs-dist served from /public/pdfjs/
+// Import PDF.js — must use the worker build which is self-contained
+// and does not require 'document' or DOM APIs
+importScripts('/pdfjs/pdf.worker.min.js')
+
+// At this point pdfjsWorker is available — PDF.js worker build
+// exports itself as a worker, so we use it directly
+// But we still need the main pdf.min.js API
 importScripts('/pdfjs/pdf.min.js')
 
-// In a Web Worker, there is no 'document', so we must disable the
-// fake worker and point directly to the worker script
-pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdfjs/pdf.worker.min.js'
-
-// Disable the fake worker fallback which tries to use 'document'
-pdfjsLib.GlobalWorkerOptions.workerPort = null
+// Setting workerSrc to empty string tells PDF.js:
+// "don't try to spawn another worker — run synchronously in this thread"
+// This is required when already inside a Web Worker context
+if (typeof pdfjsLib !== 'undefined') {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = ''
+}
 
 self.onmessage = async (e) => {
   const { pdfData, options = {} } = e.data
-  
+
   if (!pdfData) {
-    self.postMessage({ error: 'no_pdf', detail: 'No PDF data provided' })
+    self.postMessage({ type: 'error', error: 'no_pdf', detail: 'No PDF data provided' })
     return
   }
 
   try {
     console.log('[PDF Worker] Processing PDF...')
-    
-    // Default options
+
     const {
-      maxPages = 10,        // Limit pages to prevent memory issues
-      scale = 2.0,          // Higher scale for better OCR accuracy
-      outputFormat = 'png'  // PNG for better OCR than JPEG
+      maxPages = 10,
+      scale = 2.0,
+      outputFormat = 'png'
     } = options
 
-    self.postMessage({ 
-      type: 'progress', 
-      progress: 0.1, 
-      status: 'Loading PDF document...' 
+    self.postMessage({
+      type: 'progress',
+      progress: 0.1,
+      status: 'Loading PDF document...'
     })
 
-    // Load PDF document - pdfData is already ArrayBuffer
-    const pdf = await pdfjsLib.getDocument({ 
+    const loadingTask = pdfjsLib.getDocument({
       data: pdfData,
-      // Disable font loading to speed up processing
       disableFontFace: true,
-      // Use system fonts
-      useSystemFonts: true
-    }).promise
+      useSystemFonts: true,
+      // Prevent PDF.js from trying to use worker internally
+      isEvalSupported: false,
+    })
 
+    const pdf = await loadingTask.promise
     const numPages = Math.min(pdf.numPages, maxPages)
-    console.log(`[PDF Worker] PDF has ${pdf.numPages} pages, processing ${numPages}`)
 
-    self.postMessage({ 
-      type: 'progress', 
-      progress: 0.2, 
+    console.log(`[PDF Worker] ${pdf.numPages} pages, processing ${numPages}`)
+
+    self.postMessage({
+      type: 'progress',
+      progress: 0.2,
       status: `Converting ${numPages} pages to images...`,
       totalPages: numPages
     })
 
     const pages = []
 
-    // Process each page
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       try {
         const page = await pdf.getPage(pageNum)
-        
-        // Get page dimensions
         const viewport = page.getViewport({ scale })
-        
-        // Create canvas
+
         const canvas = new OffscreenCanvas(viewport.width, viewport.height)
         const context = canvas.getContext('2d')
-        
-        // Render page to canvas
+
         await page.render({
           canvasContext: context,
-          viewport: viewport
+          viewport
         }).promise
 
-        // Convert to image data URL
-        const blob = await canvas.convertToBlob({ 
-          type: `image/${outputFormat}`,
-          quality: outputFormat === 'jpeg' ? 0.95 : undefined
+        const blob = await canvas.convertToBlob({
+          type: `image/${outputFormat}`
         })
-        
+
         const reader = new FileReader()
         const dataUrl = await new Promise((resolve) => {
           reader.onload = () => resolve(reader.result)
@@ -94,56 +94,40 @@ self.onmessage = async (e) => {
           height: viewport.height
         })
 
-        // Update progress
         const progress = 0.2 + (pageNum / numPages) * 0.7
-        self.postMessage({ 
-          type: 'progress', 
-          progress, 
+        self.postMessage({
+          type: 'progress',
+          progress,
           status: `Converted page ${pageNum}/${numPages}`,
-          currentPage: pageNum
+          currentPage: pageNum,
+          totalPages: numPages
         })
 
-        // Clean up page
         page.cleanup()
 
       } catch (pageError) {
-        console.error(`[PDF Worker] Error processing page ${pageNum}:`, pageError)
-        // Continue with other pages
-        pages.push({
-          pageNumber: pageNum,
-          error: pageError.message
-        })
+        console.error(`[PDF Worker] Page ${pageNum} error:`, pageError)
+        pages.push({ pageNumber: pageNum, error: pageError.message })
       }
     }
 
-    // Clean up PDF document
     pdf.destroy()
 
-    console.log(`[PDF Worker] Successfully converted ${pages.filter(p => !p.error).length}/${numPages} pages`)
+    console.log(`[PDF Worker] Done: ${pages.filter(p => !p.error).length}/${numPages} pages`)
 
     self.postMessage({
       type: 'result',
-      pages: pages,
+      pages,
       totalPages: numPages,
       successfulPages: pages.filter(p => !p.error).length
     })
 
   } catch (err) {
     console.error('[PDF Worker] Error:', err)
-    self.postMessage({ 
-      type: 'error', 
-      error: 'pdf_processing_failed', 
-      detail: String(err) 
+    self.postMessage({
+      type: 'error',
+      error: 'pdf_processing_failed',
+      detail: String(err)
     })
   }
-}
-
-// Handle worker errors
-self.onerror = (err) => {
-  console.error('[PDF Worker] Worker error:', err)
-  self.postMessage({ 
-    type: 'error', 
-    error: 'worker_error', 
-    detail: String(err) 
-  })
 }

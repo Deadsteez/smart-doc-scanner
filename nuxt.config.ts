@@ -1,7 +1,7 @@
-
+// @ts-ignore - PWA module types
 export default defineNuxtConfig({
   devtools: { enabled: true },
-  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode','@pinia/nuxt',],
+  modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode','@pinia/nuxt','@vite-pwa/nuxt'],
 
   colorMode: {
     classSuffix: '',
@@ -22,10 +22,56 @@ export default defineNuxtConfig({
 
  runtimeConfig: {
     public: {
-      supabaseUrl: process.env.SUPABASE_URL ?? '',
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? '',
+      supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL ?? '',
+     supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
     }
   },
+
+  pwa: {
+  registerType: 'autoUpdate',
+  manifest: {
+    name: 'SmartDoc Scanner',
+    short_name: 'SmartScan',
+    description: 'AI-powered document scanner and manager',
+    theme_color: '#000000',
+    background_color: '#000000',
+    display: 'standalone',
+    orientation: 'portrait',
+    icons: [
+      {
+        src: '/icon-192.png',
+        sizes: '192x192',
+        type: 'image/png'
+      },
+      {
+        src: '/icon-512.png',
+        sizes: '512x512',
+        type: 'image/png'
+      }
+    ]
+  },
+  workbox: {
+    navigateFallback: '/',
+    globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+    runtimeCaching: [
+      {
+        urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
+        handler: 'NetworkFirst',
+        options: {
+          cacheName: 'supabase-cache',
+          expiration: {
+            maxEntries: 50,
+            maxAgeSeconds: 60 * 60 * 24 // 24 hours
+          }
+        }
+      }
+    ]
+  },
+  devOptions: {
+    enabled: true,
+    type: 'module'
+  }
+},
 
   vite: {
     worker: {
