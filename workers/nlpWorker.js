@@ -9,8 +9,9 @@ console.log('[NLP Worker] Starting...')
 // Model config
 env.localModelPath = '/models/'
 env.cacheDir = '/models/'
-env.allowRemoteModels = true   // fallback to CDN if local missing
+env.allowRemoteModels = true  // fallback to CDN if local missing
 env.allowLocalModels = true
+
 
 console.log('[NLP Worker] Model path:', env.localModelPath)
 
@@ -29,12 +30,12 @@ async function loadPipelines() {
     postMessage({ type: 'progress', stage: 'ner', progress: 0.1, status: 'Loading NER model...' })
     console.log('[NLP Worker] Loading NER pipeline...')
 
-    nerPipeline = await pipeline(
-      'token-classification',
-      'Xenova/bert-base-NER',
-      {
-        ...MODEL_OPTIONS,
-        aggregation_strategy: 'simple',
+  nerPipeline = await pipeline(
+  'token-classification',
+  'Xenova/bert-base-NER',
+  {
+    ...MODEL_OPTIONS,
+    aggregation_strategy: 'simple',
         progress_callback: (p) => {
           console.log('[NLP Worker] NER:', p.status, p.file ?? '', p.progress != null ? p.progress.toFixed(0) + '%' : '')
           if (p.status === 'downloading') {
@@ -50,9 +51,10 @@ async function loadPipelines() {
     postMessage({ type: 'progress', stage: 'classifier', progress: 0.5, status: 'Loading classifier...' })
     console.log('[NLP Worker] Loading classifier pipeline...')
 
-    classifierPipeline = await pipeline(
-      'zero-shot-classification',
-      'Xenova/nli-deberta-v3-small',
+
+   classifierPipeline = await pipeline(
+  'zero-shot-classification',
+  'Xenova/nli-deberta-v3-small',
       {
         ...MODEL_OPTIONS,
         progress_callback: (p) => {
@@ -79,7 +81,7 @@ async function loadPipelines() {
 
 //Message handler
 self.onmessage = async (e) => {
-  const { text, cvFeatures } = e.data
+  const { text, cvFeatures,image } = e.data
   if (!text?.trim()) {
     postMessage({ type: 'error', error: 'No text provided' })
     return
@@ -105,7 +107,9 @@ self.onmessage = async (e) => {
 
     postMessage({ type: 'progress', stage: 'classifier', progress: 0.7, status: 'Classifying document...' })
 
-    const classLabels = ['invoice', 'receipt', 'bank statement', 'other']
+    const classLabels = ['invoice','receipt', 'bank statement','payment slip','utility bill','tax document',
+  'contract','other']
+
     const classResult = await classifierPipeline(truncated, classLabels)
     const category = combineClassification(classResult, cvFeatures)
 
@@ -128,7 +132,6 @@ self.onmessage = async (e) => {
   }
 }
 
-//  Field extraction 
 function extractFields(text, entities) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)
 
@@ -183,6 +186,46 @@ function extractFields(text, entities) {
     paymentMethod: paymentMethod?.trim(),
     items
   }
+}
+
+
+// Fallback extraction functions
+function fallbackVendor(lines) {
+  return lines.slice(0, 5).find(l => l.length > 3 && !/^\d/.test(l))
+}
+
+function fallbackDate(text) {
+  const dateMatch =
+    text.match(/\b(\d{1,2}[\\/\-]\d{1,2}[\\/\-]\d{2,4})\b/) ||
+    text.match(/\b(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2,4})\b/i) ||
+    text.match(/\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{1,2},?\s+\d{4})\b/i)
+  return dateMatch?.[1]
+}
+
+function fallbackTotal(text) {
+  const totalMatch = text.match(
+    /\b(?:total|grand\s*total|amount\s*due|payable|balance\s*due)[^\d]*?([\d,]+\.?\d{0,2})/i
+  )
+  return totalMatch?.[1]
+}
+
+function fallbackTax(text) {
+  const taxMatch = text.match(/\b(?:tax|gst|vat|hst|pst)[^\d]*?([\d,]+\.?\d{0,2})/i)
+  return taxMatch?.[1]
+}
+
+function fallbackReceiptNumber(text) {
+  const receiptMatch = text.match(
+    /\b(?:receipt|invoice|order|ref|transaction|txn|trans)\s*(?:no\.?|#|number|id)?[:\s]*([A-Z0-9\-]{3,20})/i
+  )
+  return receiptMatch?.[1]
+}
+
+function fallbackPaymentMethod(text) {
+  const paymentMatch = text.match(
+    /\b(cash|visa|mastercard|amex|american\s*express|discover|debit|credit|upi|neft|rtgs|cheque|check|net\s*banking)\b/i
+  )
+  return paymentMatch?.[1]
 }
 
 function extractLineItems(lines) {

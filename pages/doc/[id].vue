@@ -35,7 +35,7 @@ const categoryClass = computed(() => ({
 </script>
 
 <template>
-  <div class="min-h-screen bg-black text-white">
+  <div class="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white">
     <AppNavbar />
     <div class="p-6 max-w-4xl mx-auto">
 
@@ -44,7 +44,7 @@ const categoryClass = computed(() => ({
       </NuxtLink>
 
       <!-- Loading -->
-      <div v-if="!doc" class="text-gray-400 mt-8 text-center">
+      <div v-if="!doc" class="text-gray-600 dark:text-gray-400 mt-8 text-center">
         Loading document…
       </div>
 
@@ -52,13 +52,13 @@ const categoryClass = computed(() => ({
 
        <!-- Metadata row -->
 <div class="flex items-center justify-between">
-  <span class="text-sm text-gray-400">
+  <span class="text-sm text-gray-600 dark:text-gray-400">
     {{ new Date(doc.createdAt).toLocaleString() }}
   </span>
   <div class="flex items-center gap-3">
     <button
       @click="exportDocumentToPDF(doc)"
-      class="bg-red-600/90 hover:bg-red-600 px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5"
+      class="bg-red-600/90 hover:bg-red-600 px-3 py-1.5 rounded text-xs transition flex items-center gap-1.5 text-white"
       title="Export as PDF"
     >
       <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,8 +85,8 @@ const categoryClass = computed(() => ({
 
 
         <!-- Scanned Image -->
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="font-semibold mb-3 text-gray-200">Scanned Image</h2>
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-200">Scanned Image</h2>
           <img
             :src="doc.image"
             class="rounded-lg max-w-full shadow-md"
@@ -95,9 +95,9 @@ const categoryClass = computed(() => ({
         </div>
 
         <!-- Extracted Fields -->
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="font-semibold mb-3 text-gray-200">Extracted Fields</h2>
-          <div class="grid grid-cols-2 gap-4 text-sm text-gray-300">
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-200">Extracted Fields</h2>
+          <div class="grid grid-cols-2 gap-4 text-sm text-gray-700 dark:text-gray-300">
             <div>
               <span class="block text-gray-500 text-xs mb-0.5">Vendor</span>
               {{ extracted.vendor || '—' }}
@@ -125,24 +125,24 @@ const categoryClass = computed(() => ({
           </div>
         </div>
               <!-- Line Items -->
-      <div v-if="extracted.items && extracted.items.length > 0" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <h2 class="font-semibold mb-3 text-gray-200">Line Items</h2>
+      <div v-if="extracted.items && extracted.items.length > 0" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+        <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-200">Line Items</h2>
         <div class="space-y-2">
           <div 
             v-for="(item, index) in extracted.items" 
             :key="index"
-            class="flex justify-between items-center text-sm border-b border-gray-800 pb-2 last:border-0"
+            class="flex justify-between items-center text-sm border-b border-gray-200 dark:border-gray-800 pb-2 last:border-0"
           >
-            <span class="text-gray-300">{{ item.description }}</span>
-            <span class="text-gray-100 font-medium">{{ item.amount }}</span>
+            <span class="text-gray-700 dark:text-gray-300">{{ item.description }}</span>
+            <span class="text-gray-900 dark:text-gray-100 font-medium">{{ item.amount }}</span>
           </div>
         </div>
       </div>
 
         <!-- OCR Text -->
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-          <h2 class="font-semibold mb-3 text-gray-200">OCR Text</h2>
-          <pre class="bg-black p-4 rounded-lg text-sm whitespace-pre-wrap text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText }}</pre>
+        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+          <h2 class="font-semibold mb-3 text-gray-900 dark:text-gray-200">OCR Text</h2>
+          <pre class="bg-gray-100 dark:bg-black p-4 rounded-lg text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText }}</pre>
         </div>
 
       </div>

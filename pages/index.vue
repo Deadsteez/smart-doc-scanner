@@ -76,7 +76,7 @@ function categoryClass(category) {
 </script>
 
 <template>
-  <div class="min-h-screen bg-black text-white">
+  <div class="min-h-screen bg-white dark:bg-black text-gray-900 dark:text-white">
     <AppNavbar />
     <div class="p-6 max-w-6xl mx-auto">
 
@@ -85,7 +85,7 @@ function categoryClass(category) {
   <h1 class="text-2xl font-semibold">Scanned Documents</h1>
   <div class="flex gap-2">
     <button
-      class="bg-green-600/90 hover:bg-green-600 px-4 py-2 rounded text-sm transition flex items-center gap-2"
+      class="bg-green-600/90 hover:bg-green-600 px-4 py-2 rounded text-sm transition flex items-center gap-2 text-white"
       @click="exportDocumentsToCSV(documents)"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,7 +94,7 @@ function categoryClass(category) {
       Export CSV
     </button>
     <button
-      class="bg-red-600/90 hover:bg-red-600 px-4 py-2 rounded text-sm transition flex items-center gap-2"
+      class="bg-red-600/90 hover:bg-red-600 px-4 py-2 rounded text-sm transition flex items-center gap-2 text-white"
       @click="exportMultipleDocumentsToPDF(documents)"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +112,7 @@ function categoryClass(category) {
   <input
     v-model="searchQuery"
     placeholder="Search OCR text…"
-    class="w-full px-4 py-2 rounded bg-gray-900 border border-gray-800 focus:outline-none focus:border-gray-600 transition"
+    class="w-full px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
   />
 
   <!-- Filters Row -->
@@ -120,7 +120,7 @@ function categoryClass(category) {
     <!-- Category Filter -->
     <select
       v-model="selectedCategory"
-      class="px-4 py-2 rounded bg-gray-900 border border-gray-800 focus:outline-none"
+      class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none text-gray-900 dark:text-white"
     >
       <option value="all">All Categories</option>
       <option value="receipt">Receipt</option>
@@ -134,7 +134,7 @@ function categoryClass(category) {
     <input
       v-model="vendorFilter"
       placeholder="Filter by vendor…"
-      class="px-4 py-2 rounded bg-gray-900 border border-gray-800 focus:outline-none focus:border-gray-600 transition"
+      class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
     />
 
     <!-- Date Filter -->
@@ -142,14 +142,14 @@ function categoryClass(category) {
       v-model="dateFilter"
       type="date"
       placeholder="Filter by date"
-      class="px-4 py-2 rounded bg-gray-900 border border-gray-800 focus:outline-none focus:border-gray-600 transition"
+      class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
     />
 
     <!-- Amount Filter -->
     <input
       v-model="amountFilter"
       placeholder="Filter by amount…"
-      class="px-4 py-2 rounded bg-gray-900 border border-gray-800 focus:outline-none focus:border-gray-600 transition"
+      class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
     />
   </div>
 
@@ -157,7 +157,7 @@ function categoryClass(category) {
   <button
     v-if="vendorFilter || dateFilter || amountFilter"
     @click="clearFilters"
-    class="text-sm text-gray-400 hover:text-white transition"
+    class="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition"
   >
     ✕ Clear all filters
   </button>
@@ -165,7 +165,7 @@ function categoryClass(category) {
 
 
       <!-- Empty state -->
-      <div v-if="documents.length === 0" class="text-gray-400 text-center py-16">
+      <div v-if="documents.length === 0" class="text-gray-600 dark:text-gray-400 text-center py-16">
         No matching documents.
       </div>
 
@@ -184,7 +184,7 @@ function categoryClass(category) {
           v-for="doc in documents"
           :key="doc.id"
           :to="`/doc/${doc.id}`"
-          class="relative bg-gray-900 rounded-lg border border-gray-800 hover:border-gray-700 transition p-4 block"
+          class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition p-4 block"
         >
           <!-- Delete button -->
           <button
@@ -204,14 +204,14 @@ function categoryClass(category) {
           <!-- Thumbnail -->
           <div
             v-if="doc.image"
-            class="mb-3 h-32 bg-black rounded overflow-hidden flex items-center justify-center"
+            class="mb-3 h-32 bg-gray-100 dark:bg-black rounded overflow-hidden flex items-center justify-center"
           >
             <img :src="doc.image" class="object-cover h-full w-full opacity-90" />
           </div>
 
           <!-- Meta -->
           <div class="flex justify-between items-center mb-2">
-            <span class="text-xs text-gray-400">
+            <span class="text-xs text-gray-600 dark:text-gray-400">
               {{ new Date(doc.createdAt).toLocaleString() }}
             </span>
 
@@ -234,7 +234,7 @@ function categoryClass(category) {
           </div>
 
           <!-- Text preview -->
-          <p class="text-sm text-gray-300 line-clamp-4 whitespace-pre-wrap">
+          <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-4 whitespace-pre-wrap">
             {{ doc.cleanedText?.slice(0, 200) ?? '' }}…
           </p>
         </NuxtLink>

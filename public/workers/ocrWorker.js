@@ -10,14 +10,22 @@ importScripts('/tesseract/tesseract.min.js')
 // a brand new worker + loads the LSTM model on every single call (~3-8s overhead).
 // With a persistent scheduler the model loads once (~1-2s) and subsequent
 // recognitions take ~300-800ms.
-
+let currentLanguage = 'eng'
 let scheduler = null
 let isInitializing = false
 let initQueue = []
 
-async function getScheduler() {
-  // Already ready
-  if (scheduler) return scheduler
+async function getScheduler(language = 'eng') {
+  // If language changed, recreate scheduler
+  if (scheduler && currentLanguage !== language) {
+    await scheduler.terminate()
+    scheduler = null
+  }
+  
+  if (scheduler && currentLanguage === language) return scheduler
+  
+  currentLanguage = language
+  
 
   // If init is in progress, wait for it
   if (isInitializing) {
@@ -30,9 +38,10 @@ async function getScheduler() {
 
   scheduler = Tesseract.createScheduler()
 
-  // Using 'eng' only
-  const worker = await Tesseract.createWorker('eng', 1, {
-    langPath: self.location.origin + '/tesseract/lang-data',    logger: m => {
+  const worker = await Tesseract.createWorker(language, 1, {
+    langPath: self.location.origin + '/tesseract/lang-data',
+    gzip: false,
+    logger: m => {
       if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
         postMessage({ type: 'progress', progress: 0.1, status: m.status })
       }
@@ -59,9 +68,9 @@ async function getScheduler() {
   return scheduler
 }
 
-// Message handler
 onmessage = async (e) => {
-  const { image } = e.data
+  const { image, language = 'eng' } = e.data
+  
   if (!image) {
     postMessage({ type: 'error', error: 'No image provided' })
     return
@@ -70,7 +79,7 @@ onmessage = async (e) => {
   console.log('[OCR Worker] Recognition request received')
 
   try {
-    const sched = await getScheduler()
+    const sched = await getScheduler(language)
 
     postMessage({ type: 'progress', progress: 0.25, status: 'Recognizing text...' })
 

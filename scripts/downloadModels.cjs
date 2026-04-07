@@ -3,7 +3,7 @@
 
 const path = require('path')
 const fs = require('fs')
-
+require('dotenv').config()
 const PUBLIC_MODELS_DIR = path.join(__dirname, '..', 'public', 'models')
 
 if (!fs.existsSync(PUBLIC_MODELS_DIR)) {
@@ -19,22 +19,25 @@ async function main() {
   env.localModelPath = PUBLIC_MODELS_DIR
   env.allowRemoteModels = true
   env.allowLocalModels = true
+  env.hfToken = process.env.HF_TOKEN
 
+  //add huggingface token
   console.log('\n Downloading models to:', PUBLIC_MODELS_DIR)
   console.log('This runs once — models work fully offline after.\n')
 
-  const models = [
-    {
-      task: 'token-classification',
-      model: 'Xenova/bert-base-NER',
-      label: 'NER — vendor, date, amount extraction'
-    },
-    {
-      task: 'zero-shot-classification',
-      model: 'Xenova/nli-deberta-v3-small',
-      label: 'Document classifier — invoice/receipt/other'
-    }
-  ]
+ const models = [
+  {
+    task: 'token-classification',
+    model: 'Xenova/bert-base-NER',
+    label: 'BERT NER — entity extraction'
+  },
+  {
+    task: 'zero-shot-classification',
+    model: 'Xenova/nli-deberta-v3-small',
+    label: 'DeBERTa — document classifier'
+  }
+]
+
 
   for (const { task, model, label } of models) {
     console.log(`⬇ ${label}`)
@@ -42,21 +45,22 @@ async function main() {
 
     try {
       await pipeline(task, model, {
-        progress_callback: (p) => {
-          if (p.status === 'downloading') {
-            const pct = p.progress != null ? p.progress.toFixed(1) + '%' : '...'
-            process.stdout.write(`\r   ${p.file ?? ''} — ${pct}        `)
-          }
-          if (p.status === 'done') {
-            process.stdout.write(`\r   ✓ ${p.file ?? 'file'} done          \n`)
-          }
-        }
-      })
+  progress_callback: (p) => {
+    if (p.status === 'downloading') {
+      const pct = p.progress != null ? p.progress.toFixed(1) + '%' : '...'
+      process.stdout.write(`\r   ${p.file ?? ''} — ${pct}        `)
+    }
+    if (p.status === 'done') {
+      process.stdout.write(`\r   ✓ ${p.file ?? 'file'} done          \n`)
+    }
+  }
+})
+
       console.log(` ${label} ready\n`)
     } catch (err) {
       console.error(`\n❌ Failed: ${label}`)
       console.error('   Error:', err.message)
-      process.exit(1)
+      continue
     }
   }
 

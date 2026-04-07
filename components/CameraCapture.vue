@@ -7,6 +7,7 @@ import { usePdfProcessor } from '~/composables/usePdfProcessor'
 import PdfUploader from '~/components/scanner/PdfUploader.vue'
 // NLP worker loaded via Vite's ?worker syntax — handles ES module bundling automatically
 import NlpWorker from '~/workers/nlpWorker.js?worker'
+import LanguageSelector from '~/components/LanguageSelector.vue'
 
 // ─── State ────────────────────────────────────────────────────
 const videoEl = ref(null)        // owned here — NOT passed as prop
@@ -18,6 +19,8 @@ const processedImage = ref(null)
 const ocrText = ref(null)
 const ocrProgress = ref(0)
 const ocrConfidence = ref(null)
+const selectedLanguage = ref('eng')
+
 
 const cameraError = ref(null)
 const captureError = ref(null)
@@ -276,12 +279,15 @@ function runOCR() {
   ocrConfidence.value = null
   isSaved.value = false
   saveError.value = null
-  ocrWorker.postMessage({ image: processedImage.value })
+   ocrWorker.postMessage({ 
+    image: processedImage.value,
+    language: selectedLanguage.value 
+  })
 }
 
 // ─── NLP job queue helpers ────────────────────────────────────
-function enqueueNlpJob(text, cvFeatures) {
-  const job = { text, cvFeatures }
+function enqueueNlpJob(text, cvFeatures, image) {
+  const job = { text, cvFeatures, image }
 
   if (!nlpReady.value) {
     // Models still loading — queue the job, will be drained on 'ready'
@@ -304,7 +310,11 @@ function enqueueNlpJob(text, cvFeatures) {
 function dispatchNlpJob(job) {
   nlpBusy.value = true
   currentNlpJob.value = job
-  nlpWorker.postMessage({ text: job.text, cvFeatures: job.cvFeatures })
+  nlpWorker.postMessage({ 
+    text: job.text, 
+    cvFeatures: job.cvFeatures,
+    image: job.image 
+  })
 }
 
 function processNextNlpJob() {
@@ -330,7 +340,7 @@ async function saveDocument(rawText) {
     const cvFeatures = await extractCvFeatures(processedImage.value)
 
     // Enqueue — handles not-ready and busy states automatically
-    enqueueNlpJob(cleanedText, cvFeatures)
+    enqueueNlpJob(cleanedText, cvFeatures, processedImage.value)
 
   } catch (err) {
     console.error('Pipeline error:', err)
@@ -428,16 +438,16 @@ async function toggleCamera() {
       <!-- Page header -->
       <div class="mb-2">
         <!-- <h1 class="text-2xl font-semibold mb-1">Scan Document</h1> -->
-        <p class="text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
+        <p class="text-gray-600 dark:text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
       </div>
 
       <!-- ── Camera Card ── -->
         <!-- ── Camera Card ── -->
-<div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
 
   <!-- Toggle header -->
   <div class="flex items-center justify-between px-4 pt-4 pb-2">
-    <p class="text-sm font-medium text-gray-300">Camera</p>
+    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Camera</p>
 <button
   @click="toggleCamera"
   class="text-xs px-3 py-1.5 rounded-lg border transition-colors"
@@ -516,7 +526,7 @@ async function toggleCamera() {
 
       <!-- ── PDF Uploader Modal ── -->
       <div v-if="showPdfUploader" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div class="bg-gray-50 dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
           <PdfUploader 
             @pages-selected="handlePdfPagesSelected"
             @cancel="handlePdfCancel"
@@ -525,9 +535,9 @@ async function toggleCamera() {
       </div>
 
       <!-- ── PDF Page Navigation ── -->
-      <div v-if="pdfPages.length > 1" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div v-if="pdfPages.length > 1" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
-          <p class="text-gray-400 text-sm font-medium">PDF Page Navigation</p>
+          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">PDF Page Navigation</p>
           <span class="text-xs text-gray-500">
             Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}
           </span>
@@ -568,9 +578,9 @@ async function toggleCamera() {
       </div>
 
       <!-- ── Original Image ── -->
-      <div v-if="capturedImage" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div v-if="capturedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
         <div class="flex justify-between items-center mb-3">
-          <p class="text-gray-400 text-sm font-medium">Original</p>
+          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Original</p>
           <button
             class="text-red-500 hover:text-red-400 transition text-lg"
             title="Clear image"
@@ -582,9 +592,15 @@ async function toggleCamera() {
         <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
       </div>
 
+      <!-- Language Selector -->
+<div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+  <LanguageSelector v-model="selectedLanguage" />
+</div>
+
+
       <!-- ── Preprocessed Image ── -->
-      <div v-if="processedImage" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <p class="text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
+      <div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+        <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
         <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
         <button
           class="w-full bg-green-600 hover:bg-green-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
@@ -600,13 +616,13 @@ async function toggleCamera() {
       <!-- ── OCR Progress ── -->
       <div
         v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText"
-        class="bg-gray-900 border border-gray-800 rounded-xl p-4"
+        class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4"
       >
         <div class="flex items-center gap-3 mb-3">
           <div class="w-4 h-4 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-          <span class="text-sm text-gray-300">Extracting text from document…</span>
+          <span class="text-sm text-gray-700 dark:text-gray-300">Extracting text from document…</span>
         </div>
-        <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
           <div
             class="h-full bg-blue-500 transition-all duration-300"
             :style="{ width: `${ocrProgress}%` }"
@@ -616,9 +632,9 @@ async function toggleCamera() {
       </div>
 
       <!-- ── OCR Output ── -->
-      <div v-if="ocrText" class="bg-gray-900 border border-gray-800 rounded-xl p-4">
+      <div v-if="ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
         <div class="flex items-center justify-between mb-3">
-          <p class="font-semibold text-gray-200">OCR Output</p>
+          <p class="font-semibold text-gray-900 dark:text-gray-200">OCR Output</p>
           <div class="flex items-center gap-2">
             <span
               v-if="ocrConfidence !== null"
@@ -636,7 +652,7 @@ async function toggleCamera() {
             </span>
           </div>
         </div>
-        <pre class="text-sm whitespace-pre-wrap text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-black p-4 rounded-lg">{{ ocrText }}</pre>
+        <pre class="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-gray-100 dark:bg-black p-4 rounded-lg">{{ ocrText }}</pre>
       </div>
 
       <!-- ── Save error ── -->

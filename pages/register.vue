@@ -29,29 +29,29 @@ const handleRegister = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-black flex items-center justify-center px-4">
-    <div class="w-full max-w-md bg-gray-900 border border-gray-800 rounded-xl p-8">
+  <div class="min-h-screen bg-white dark:bg-black flex items-center justify-center px-4">
+    <div class="w-full max-w-md bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-8">
 
-      <h2 class="text-2xl font-semibold text-white mb-1">Create account</h2>
-      <p class="text-gray-400 text-sm mb-6">Sign up to get started</p>
+      <h2 class="text-2xl font-semibold text-gray-900 dark:text-white mb-1">Create account</h2>
+      <p class="text-gray-600 dark:text-gray-400 text-sm mb-6">Sign up to get started</p>
 
       <div class="mb-4">
-        <label class="block text-sm text-gray-400 mb-1">Email</label>
+        <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Email</label>
         <input
           v-model="email"
           type="email"
           placeholder="you@example.com"
-          class="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition"
+          class="w-full px-4 py-2 rounded-lg bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-green-500 transition"
         />
       </div>
 
       <div class="mb-6">
-        <label class="block text-sm text-gray-400 mb-1">Password</label>
+        <label class="block text-sm text-gray-600 dark:text-gray-400 mb-1">Password</label>
         <input
           v-model="password"
           type="password"
           placeholder="••••••••"
-          class="w-full px-4 py-2 rounded-lg bg-black border border-gray-700 text-white placeholder-gray-600 focus:outline-none focus:border-green-500 transition"
+          class="w-full px-4 py-2 rounded-lg bg-white dark:bg-black border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:border-green-500 transition"
           @keyup.enter="handleRegister"
         />
       </div>

@@ -58,11 +58,10 @@ export function isValidOcrOutput(text: string): boolean {
   // Need at least 10 non-whitespace characters
   if (stripped.length < 10) return false
 
-  // Measure alphanumeric ratio against non-whitespace chars only.
-  // Old approach used total text length — sparse receipts/invoices have
-  // 60%+ whitespace so the ratio always failed even on clean OCR output.
-  const alphanumericRatio = (stripped.match(/[a-zA-Z0-9]/g) || []).length / stripped.length
-  if (alphanumericRatio < 0.3) return false  // lowered from 0.5 — allows currency symbols, punctuation
+  // Check for alphanumeric (English) OR Unicode letters (Hindi, Marathi, etc.)
+  // \p{L} matches any Unicode letter, \p{N} matches any Unicode number
+  const validCharsRatio = (stripped.match(/[a-zA-Z0-9\u0900-\u097F]/g) || []).length / stripped.length
+  if (validCharsRatio < 0.3) return false
 
   return true
 }
