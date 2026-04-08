@@ -13,7 +13,6 @@ const handleRegister = async () => {
   message.value = ''
   loading.value = true
 
-  // Supabase returns { data, error } .
   const { data, error } = await register(email.value, password.value)
 
   loading.value = false

@@ -21,26 +21,21 @@ onMounted(async () => {
 
 const documents = computed(() => {
   return documentStore.documents.filter(doc => {
-    // Text search
     const matchesSearch =
       (doc.cleanedText ?? '').toLowerCase().includes(searchQuery.value.toLowerCase())
 
-    // Category filter
     const matchesCategory =
       selectedCategory.value === 'all' ||
       doc.category?.type === selectedCategory.value
 
-    // Vendor filter
     const matchesVendor =
       !vendorFilter.value ||
       (doc.extracted?.vendor ?? '').toLowerCase().includes(vendorFilter.value.toLowerCase())
 
-    // Date filter
     const matchesDate =
       !dateFilter.value ||
       (doc.extracted?.date ?? '').includes(dateFilter.value)
 
-    // Amount filter
     const matchesAmount =
       !amountFilter.value ||
       (doc.extracted?.total ?? '').includes(amountFilter.value)
@@ -63,7 +58,6 @@ function clearFilters() {
   amountFilter.value = ''
 }
 
-// receives category object, reads .type for the color lookup
 function categoryClass(category) {
   return {
     receipt:       'bg-blue-500/20 text-blue-400',
@@ -80,7 +74,7 @@ function categoryClass(category) {
     <AppNavbar />
     <div class="p-6 max-w-6xl mx-auto">
 
-      <!-- Header -->
+
 <div class="flex justify-between items-center mb-6">
   <h1 class="text-2xl font-semibold">Scanned Documents</h1>
   <div class="flex gap-2">
@@ -108,16 +102,13 @@ function categoryClass(category) {
 
 <!-- Search + Filter -->
 <div class="space-y-4 mb-8">
-  <!-- Text Search -->
-  <input
-    v-model="searchQuery"
-    placeholder="Search OCR text…"
+
+  <input v-model="searchQuery" placeholder="Search OCR text…"
     class="w-full px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
   />
 
-  <!-- Filters Row -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-    <!-- Category Filter -->
+   
     <select
       v-model="selectedCategory"
       class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none text-gray-900 dark:text-white"
@@ -130,14 +121,13 @@ function categoryClass(category) {
       <option value="uncategorized">Uncategorized</option>
     </select>
 
-    <!-- Vendor Filter -->
+    
     <input
       v-model="vendorFilter"
       placeholder="Filter by vendor…"
       class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
     />
 
-    <!-- Date Filter -->
     <input
       v-model="dateFilter"
       type="date"
@@ -145,7 +135,6 @@ function categoryClass(category) {
       class="px-4 py-2 rounded bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 focus:outline-none focus:border-gray-400 dark:focus:border-gray-600 transition text-gray-900 dark:text-white"
     />
 
-    <!-- Amount Filter -->
     <input
       v-model="amountFilter"
       placeholder="Filter by amount…"
@@ -153,7 +142,6 @@ function categoryClass(category) {
     />
   </div>
 
-  <!-- Clear Filters Button -->
   <button
     v-if="vendorFilter || dateFilter || amountFilter"
     @click="clearFilters"
@@ -162,14 +150,11 @@ function categoryClass(category) {
     ✕ Clear all filters
   </button>
 </div>
-
-
-      <!-- Empty state -->
+     
       <div v-if="documents.length === 0" class="text-gray-600 dark:text-gray-400 text-center py-16">
         No matching documents.
       </div>
 
-      <!-- Sync indicator -->
       <div
         v-if="documentStore.syncing"
         class="mb-4 text-xs text-gray-500 flex items-center gap-1.5"
@@ -178,17 +163,11 @@ function categoryClass(category) {
         Syncing to cloud…
       </div>
 
-      <!-- Document Grid -->
       <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <NuxtLink
-          v-for="doc in documents"
-          :key="doc.id"
-          :to="`/doc/${doc.id}`"
-          class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition p-4 block"
-        >
-          <!-- Delete button -->
-          <button
-            class="absolute top-2 right-2 text-red-700 hover:text-red-500 transition"
+        <NuxtLink v-for="doc in documents" :key="doc.id" :to="`/doc/${doc.id}`"
+          class="relative bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition p-4 block">
+
+          <button class="absolute top-2 right-2 text-red-700 hover:text-red-500 transition"
             title="Delete document"
             @click="deleteDoc(doc.id, $event)"
           >
@@ -201,7 +180,6 @@ function categoryClass(category) {
             </svg>
           </button>
 
-          <!-- Thumbnail -->
           <div
             v-if="doc.image"
             class="mb-3 h-32 bg-gray-100 dark:bg-black rounded overflow-hidden flex items-center justify-center"
@@ -209,21 +187,18 @@ function categoryClass(category) {
             <img :src="doc.image" class="object-cover h-full w-full opacity-90" />
           </div>
 
-          <!-- Meta -->
           <div class="flex justify-between items-center mb-2">
             <span class="text-xs text-gray-600 dark:text-gray-400">
               {{ new Date(doc.createdAt).toLocaleString() }}
             </span>
 
             <div class="flex items-center gap-1.5">
-              <!-- Sync dot — gray if not yet synced to Supabase -->
               <span
                 :title="doc.synced ? 'Synced to cloud' : 'Saved locally, pending sync'"
                 class="w-1.5 h-1.5 rounded-full flex-shrink-0"
                 :class="doc.synced ? 'bg-green-500' : 'bg-yellow-500'"
               ></span>
 
-              <!--display category.type not the whole category object -->
               <span
                 class="text-xs px-2 py-1 rounded uppercase tracking-wide"
                 :class="categoryClass(doc.category)"
@@ -233,7 +208,6 @@ function categoryClass(category) {
             </div>
           </div>
 
-          <!-- Text preview -->
           <p class="text-sm text-gray-700 dark:text-gray-300 line-clamp-4 whitespace-pre-wrap">
             {{ doc.cleanedText?.slice(0, 200) ?? '' }}…
           </p>

@@ -11,8 +11,7 @@ const { login } = useAuth()
 const handleLogin = async () => {
   errorMsg.value = ''
   loading.value = true
-
-  // Supabase returns { data, error } 
+  
   const { data, error } = await login(email.value, password.value)
 
   loading.value = false

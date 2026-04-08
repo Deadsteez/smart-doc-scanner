@@ -5,7 +5,7 @@ import { useDocumentStore } from '~/stores/documentStore'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
 import { usePdfProcessor } from '~/composables/usePdfProcessor'
 import PdfUploader from '~/components/scanner/PdfUploader.vue'
-import NlpWorker from '~/workers/nlpWorker.js?worker'
+import NlpWorker from '/workers/nlpWorker.js?worker'
 import LanguageSelector from '~/components/LanguageSelector.vue'
 
 const videoEl = ref(null)       

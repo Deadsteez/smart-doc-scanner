@@ -140,8 +140,7 @@ const handleDrop = async (e) => {
     </div>
     
     <div v-if="!hasPages && !isProcessing" class="p-6">
-      <div
-        class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
+      <div class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
         :class="isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 hover:border-gray-600'"
         @dragover="handleDragOver"
         @dragleave="handleDragLeave"
@@ -154,10 +153,7 @@ const handleDrop = async (e) => {
         
         <p class="text-gray-300 mb-2">Drop PDF file here or</p>
         
-        <button
-          @click="triggerFileInput"
-          class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition"
-        >
+        <button @click="triggerFileInput" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition">
           Choose PDF File
         </button>
         
@@ -166,13 +162,7 @@ const handleDrop = async (e) => {
         </p>
       </div>
 
-      <input
-        ref="fileInputEl"
-        type="file"
-        accept=".pdf,application/pdf"
-        class="hidden"
-        @change="handleFileUpload"
-      />
+      <input ref="fileInputEl" type="file" accept=".pdf,application/pdf" class="hidden" @change="handleFileUpload"/>
     </div>
     
     <div v-if="isProcessing" class="p-6">
@@ -203,26 +193,19 @@ const handleDrop = async (e) => {
         {{ error }}
       </div>
     </div>
-
-   
+    
     <div v-if="hasPages && !isProcessing" class="p-4">
-      
       <div class="flex justify-between items-center mb-4">
         <div class="text-sm text-gray-400">
           {{ selectedCount }}/{{ pdfPages.length }} pages selected
         </div>
         
         <div class="flex gap-2">
-          <button
-            @click="selectAllPages"
-            class="text-xs px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition"
-          >
+          <button @click="selectAllPages" class="text-xs px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition">
             Select All
           </button>
-          <button
-            @click="deselectAllPages"
-            class="text-xs px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition"
-          >
+
+          <button @click="deselectAllPages"class="text-xs px-3 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded transition">
             Deselect All
           </button>
         </div>
@@ -230,28 +213,13 @@ const handleDrop = async (e) => {
 
       
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4 max-h-96 overflow-y-auto">
-        <div
-          v-for="page in pdfPages"
-          :key="page.pageNumber"
-          class="relative border rounded-lg overflow-hidden cursor-pointer transition-all"
-          :class="selectedPages.has(page.pageNumber)
-            ? 'border-blue-500 ring-2 ring-blue-500/50'
-            : 'border-gray-700 hover:border-gray-600'"
-          @click="togglePageSelection(page.pageNumber)"
-        >
+        <div v-for="page in pdfPages":key="page.pageNumber"class="relative border rounded-lg overflow-hidden cursor-pointer transition-all" :class="selectedPages.has(page.pageNumber) ? 'border-blue-500 ring-2 ring-blue-500/50' : 'border-gray-700 hover:border-gray-600'"
+          @click="togglePageSelection(page.pageNumber)">
          
-          <img
-            :src="page.image"
-            :alt="`Page ${page.pageNumber}`"
-            class="w-full h-24 object-cover bg-gray-800"
-          />
+          <img :src="page.image" alt="`Page ${page.pageNumber}`" class="w-full h-24 object-cover bg-gray-800"/>
           
-         
-          <div class="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
-            {{ page.pageNumber }}
-          </div>
-          
-         
+          <div class="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">{{ page.pageNumber }}</div>
+
           <div
             v-if="selectedPages.has(page.pageNumber)"
             class="absolute top-1 right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
@@ -262,7 +230,6 @@ const handleDrop = async (e) => {
           </div>
         </div>
       </div>
-
       
       <div class="flex gap-3">
         <button
@@ -273,10 +240,7 @@ const handleDrop = async (e) => {
           Process {{ selectedCount }} Page{{ selectedCount !== 1 ? 's' : '' }}
         </button>
         
-        <button
-          @click="cancel"
-          class="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition"
-        >
+        <button @click="cancel"class="px-4 py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg transition">
           Cancel
         </button>
       </div>
