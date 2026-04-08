@@ -27,7 +27,7 @@ export interface DocumentRecord {
   extracted: ExtractedFields
   category: {
     type: 'invoice' | 'receipt' | 'other'
-    nlpLabel?: string       // full NLP label e.g. 'bank_statement'
+    nlpLabel?: string       
     confidence: number
     scores: {
       invoice: number
@@ -45,6 +45,7 @@ class DocumentDB extends Dexie {
   constructor() {
     super('SmartDocScannerDB')
     this.version(3).stores({
+      //Indexed DB schema
       documents: '++id, createdAt, synced, supabaseId, userId'
     })
   }
