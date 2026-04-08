@@ -1,7 +1,5 @@
-// OpenCV preprocessing pipeline for financial document OCR
-
+// OpenCV preprocessing pipeline for OCR cleanup
 let cvLoaded = false
-
 console.log('[Preprocess Worker] Starting...')
 
 self.Module = {
@@ -52,9 +50,9 @@ self.onmessage = async (e) => {
   }
 }
 
-//  Full preprocessing pipeline 
+// Full preprocessing pipeline 
 async function preprocess(dataURL) {
-  // 1. Decode image
+
   const res = await fetch(dataURL)
   const blob = await res.blob()
   const bitmap = await createImageBitmap(blob)
@@ -63,10 +61,7 @@ async function preprocess(dataURL) {
   const origH = bitmap.height
   console.log(`[Preprocess Worker] Input: ${origW}x${origH}`)
 
-  // 2. Scale to optimal size for Tesseract
-  // Tesseract accuracy peaks at ~300 DPI equivalent.
-  // For typical document scans we target 2400px on the longest side.
-  // Too large = slow; too small = inaccurate.
+  // Target OCR-friendly resolution without overscaling
   const TARGET_LONG_SIDE = 2400
   const scale = Math.min(TARGET_LONG_SIDE / Math.max(origW, origH), 2.0)
   const scaledW = Math.round(origW * scale)
@@ -78,7 +73,6 @@ async function preprocess(dataURL) {
 
   const imageData = ctx.getImageData(0, 0, scaledW, scaledH)
 
-  // 3. Convert to OpenCV Mat
   let src = cv.matFromImageData(imageData)
   let gray = new cv.Mat()
   let denoised = new cv.Mat()
@@ -87,29 +81,17 @@ async function preprocess(dataURL) {
   let deskewed = new cv.Mat()
 
   try {
-    // 4. Grayscale
+    
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
 
-    // 5. Denoise — larger kernel than before for high-res images
-    // fastNlMeansDenoising is ideal but not available in WASM build.
-    // GaussianBlur 5x5 removes sensor noise without destroying text edges.
+    // Mild blur removes sensor noise
     cv.GaussianBlur(gray, denoised, new cv.Size(5, 5), 0)
 
-    // 6. Sharpen — unsharp mask to restore edge crispness lost in blur
-    // This dramatically improves character edge definition for OCR.
-    const kernel = cv.matFromArray(3, 3, cv.CV_32F, [
-       0, -1,  0,
-      -1,  5, -1,
-       0, -1,  0
-    ])
+    const kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1,  0,-1,  5, -1,0, -1,  0])
     cv.filter2D(denoised, sharpened, cv.CV_8U, kernel)
     kernel.delete()
 
-    // 7. Adaptive threshold — better than Otsu for uneven lighting
-    // (e.g. phone camera with shadow across receipt)
-    // ADAPTIVE_THRESH_GAUSSIAN_C uses a weighted mean of the neighbourhood.
-    // Block size 31 works well for text at our target resolution.
-    // C=10 is the constant subtracted — tune up if text is breaking up.
+    // Adaptive threshold handles uneven lighting
     cv.adaptiveThreshold(
       sharpened,
       binary,
@@ -120,13 +102,8 @@ async function preprocess(dataURL) {
       10
     )
 
-    // 8. Deskew — correct document rotation for better line segmentation
-    // Uses minAreaRect on the thresholded image to find the text angle.
     deskewed = deskewImage(binary)
 
-    // 9. Add white border padding around the document
-    // Tesseract requires whitespace margin around text to correctly
-    // detect line boundaries and avoid clipping edge characters.
     const PADDING = 40
     const padded = new cv.Mat()
     cv.copyMakeBorder(
@@ -137,7 +114,6 @@ async function preprocess(dataURL) {
       new cv.Scalar(255, 255, 255, 255)
     )
 
-    // 10. Convert single-channel binary → RGBA for canvas output
     const finalW = padded.cols
     const finalH = padded.rows
     const outCanvas = new OffscreenCanvas(finalW, finalH)
@@ -146,10 +122,10 @@ async function preprocess(dataURL) {
     const grayData = padded.data
     const rgba = new Uint8ClampedArray(finalW * finalH * 4)
     for (let i = 0, j = 0; i < grayData.length; i++, j += 4) {
-      const v = grayData[i]
-      rgba[j] = v
-      rgba[j + 1] = v
-      rgba[j + 2] = v
+      const value = grayData[i]
+      rgba[j] = value
+      rgba[j + 1] = value
+      rgba[j + 2] = value
       rgba[j + 3] = 255
     }
 
@@ -158,7 +134,6 @@ async function preprocess(dataURL) {
 
     console.log(`[Preprocess Worker] Output: ${finalW}x${finalH}`)
 
-    // 11. Export as PNG (JPEG artifacts hurt OCR accuracy)
     const processedBlob = await outCanvas.convertToBlob({ type: 'image/png' })
     const reader = new FileReader()
     return new Promise((resolve) => {
@@ -167,7 +142,6 @@ async function preprocess(dataURL) {
     })
 
   } finally {
-    // prevent memory leaks
     src.delete()
     gray.delete()
     denoised.delete()
@@ -177,38 +151,30 @@ async function preprocess(dataURL) {
   }
 }
 
-//  Deskew 
-// Finds the dominant text angle and rotates the image to correct it.
-// Improves Tesseract line segmentation significantly on tilted captures.
+// Correct dominant text skew before OCR
 function deskewImage(binaryMat) {
-  const MAX_SKEW_ANGLE = 15 // ignore rotations beyond 15° (likely wrong crop)
-
+  const MAX_SKEW_ANGLE = 15 
   try {
-    // Find all non-zero (text) pixel coordinates
     const points = []
     for (let y = 0; y < binaryMat.rows; y++) {
       for (let x = 0; x < binaryMat.cols; x++) {
-        // In a binary image, text pixels are 0 (black), background is 255
         if (binaryMat.ucharAt(y, x) === 0) {
           points.push({ x, y })
         }
       }
     }
 
-    // Need enough text pixels to reliably estimate angle
     if (points.length < 100) {
       console.log('[Preprocess Worker] Not enough points for deskew, skipping')
       return binaryMat.clone()
     }
 
-    // Sample a subset for performance on large images
     const sampled = points.length > 5000
       ? points.filter((_, i) => i % Math.floor(points.length / 5000) === 0)
       : points
 
-    // Convert to cv.Mat of points for minAreaRect
     const pointsMat = cv.matFromArray(sampled.length, 1, cv.CV_32FC2,
-      sampled.flatMap(p => [p.x, p.y])
+      sampled.flatMap(point => [point.x, point.y])
     )
 
     const rect = cv.minAreaRect(pointsMat)
@@ -216,32 +182,29 @@ function deskewImage(binaryMat) {
 
     let angle = rect.angle
 
-    // minAreaRect returns angle in [-90, 0) — normalize to [-45, 45]
     if (angle < -45) angle += 90
 
     console.log(`[Preprocess Worker] Detected skew angle: ${angle.toFixed(2)}°`)
 
-    // Skip correction for small angles or implausible large ones
     if (Math.abs(angle) < 0.5 || Math.abs(angle) > MAX_SKEW_ANGLE) {
       return binaryMat.clone()
     }
 
-    // Build rotation matrix around image center
     const center = new cv.Point(binaryMat.cols / 2, binaryMat.rows / 2)
-    const M = cv.getRotationMatrix2D(center, angle, 1.0)
+    const matrix = cv.getRotationMatrix2D(center, angle, 1.0)
 
     const rotated = new cv.Mat()
     cv.warpAffine(
       binaryMat,
       rotated,
-      M,
+      matrix,
       new cv.Size(binaryMat.cols, binaryMat.rows),
       cv.INTER_LINEAR,
       cv.BORDER_CONSTANT,
-      new cv.Scalar(255) // fill with white
+      new cv.Scalar(255) 
     )
 
-    M.delete()
+    matrix.delete()
     return rotated
 
   } catch (err) {
