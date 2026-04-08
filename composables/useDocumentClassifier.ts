@@ -1,6 +1,3 @@
-
-// In Nuxt, `~` maps to the project root. `@` is not configured by default
-// and will cause a module-not-found error at build time.
 import type { CvFeatures } from '~/composables/useCvFeatures'
 
 export type DocumentType = 'invoice' | 'receipt' | 'other'

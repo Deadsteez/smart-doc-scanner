@@ -61,7 +61,7 @@ export default defineNuxtConfig({
           cacheName: 'supabase-cache',
           expiration: {
             maxEntries: 50,
-            maxAgeSeconds: 60 * 60 * 24 // 24 hours
+            maxAgeSeconds: 60 * 60 * 24 
           }
         }
       }

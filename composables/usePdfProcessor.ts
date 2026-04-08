@@ -1,7 +1,5 @@
 import { ref, readonly, onBeforeUnmount } from 'vue'
 
-// Composable for PDF processing functionality
-
 export interface PdfPage {
   pageNumber: number
   image?: string
@@ -36,7 +34,6 @@ export const usePdfProcessor = () => {
 
   let pdfWorker: Worker | null = null
 
-  // Initialize worker
   const initWorker = () => {
     if (pdfWorker) return pdfWorker
 
@@ -107,27 +104,24 @@ export const usePdfProcessor = () => {
 
       worker.addEventListener('message', handleMessage)
 
-      // Strip Vue reactive proxy (if options came from a ref/reactive)
-      // Reactive proxies cannot be cloned by postMessage — must use plain object
       const plainOptions = JSON.parse(JSON.stringify(options))
       const pdfData = data.slice(0)
       worker.postMessage({ pdfData, options: plainOptions })
     })
   }
 
-  // Check if file is PDF
   const isPdfFile = (file: File): boolean => {
     return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
   }
 
-  // Validate PDF file
+  
   const validatePdfFile = (file: File): { valid: boolean; error?: string } => {
     if (!isPdfFile(file)) {
       return { valid: false, error: 'File is not a PDF' }
     }
 
     // Check file size (limit to 50MB)
-    const maxSize = 50 * 1024 * 1024 // 50MB
+    const maxSize = 50 * 1024 * 1024 
     if (file.size > maxSize) {
       return { valid: false, error: 'PDF file too large (max 50MB)' }
     }
@@ -142,11 +136,8 @@ export const usePdfProcessor = () => {
       
       reader.onload = async () => {
         try {
-          // This is a simplified approach - in a real implementation,
-          // you might want to use PDF.js to get actual page count
           const arrayBuffer = reader.result as ArrayBuffer
           
-          // For now, estimate based on file size (rough approximation)
           const estimatedPages = Math.max(1, Math.floor(file.size / (100 * 1024))) // ~100KB per page
           
           resolve({
@@ -173,19 +164,14 @@ export const usePdfProcessor = () => {
     progress.value = null
     error.value = null
   }
-
-  // Auto cleanup on unmount
   onBeforeUnmount(() => {
     cleanup()
   })
 
   return {
-    // State
     isProcessing: readonly(isProcessing),
     progress: readonly(progress),
     error: readonly(error),
-    
-    // Methods
     processPdf,
     isPdfFile,
     validatePdfFile,
