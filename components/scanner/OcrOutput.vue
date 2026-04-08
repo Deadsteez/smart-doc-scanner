@@ -3,7 +3,6 @@ defineProps({
   text: String
 })
 </script>
-
 <template>
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-5">
     <div class="flex items-center justify-between mb-4">
@@ -17,7 +16,6 @@ defineProps({
         Complete
       </span>
     </div>
-
     <div class="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 max-h-96 overflow-y-auto border border-gray-200 dark:border-gray-700">
       <pre class="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-mono leading-relaxed">{{ text }}</pre>
     </div>

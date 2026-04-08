@@ -5,13 +5,11 @@ import { useDocumentStore } from '~/stores/documentStore'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
 import { usePdfProcessor } from '~/composables/usePdfProcessor'
 import PdfUploader from '~/components/scanner/PdfUploader.vue'
-// NLP worker loaded via Vite's ?worker syntax — handles ES module bundling automatically
 import NlpWorker from '~/workers/nlpWorker.js?worker'
 import LanguageSelector from '~/components/LanguageSelector.vue'
 
-// ─── State ────────────────────────────────────────────────────
-const videoEl = ref(null)        // owned here — NOT passed as prop
-const fileInputEl = ref(null)    // hidden file input for styled upload button
+const videoEl = ref(null)       
+const fileInputEl = ref(null)    
 const stream = ref(null)
 
 const capturedImage = ref(null)
@@ -29,31 +27,25 @@ const isSaved = ref(false)
 const saveError = ref(null)
 const nlpStatus = ref(null)
 
-// ── PDF Support ──────────────────────────────────────────────
 const showPdfUploader = ref(false)
 const pdfPages = ref([])
 const currentPdfPageIndex = ref(0)
 const { isPdfFile } = usePdfProcessor()
 
-// ── NLP job queue — prevents race conditions on rapid uploads ─
-const nlpReady = ref(false)        // true once models are loaded
-const nlpBusy = ref(false)         // true while a job is running
-const nlpQueue = []                // pending jobs waiting for worker
-const currentNlpJob = ref(null)    // job currently being processed
+const nlpReady = ref(false)        
+const nlpBusy = ref(false)        
+const nlpQueue = []               
+const currentNlpJob = ref(null)    
 
-// ─── Workers ──────────────────────────────────────────────────
 let preprocessWorker = null
 let ocrWorker = null
-let nlpWorker = null       // Transformers.js NER + classifier
+let nlpWorker = null      
 
-// ─── Store (client-only) ──────────────────────────────────────
 let documentStore = null
 
-// ─── Lifecycle ────────────────────────────────────────────────
 onMounted(() => {
   documentStore = useDocumentStore()
-
-  // OpenCV preprocessing worker
+  
   preprocessWorker = new Worker('/workers/preprocessWorker.js')
   preprocessWorker.onmessage = (e) => {
     if (e.data.cleanedImage) {
@@ -62,7 +54,6 @@ onMounted(() => {
   }
   preprocessWorker.onerror = (err) => console.error('Preprocess worker error:', err)
 
-  // Tesseract OCR worker
   ocrWorker = new Worker('/workers/ocrWorker.js')
   ocrWorker.onmessage = async (e) => {
     const msg = e.data
@@ -90,9 +81,6 @@ onMounted(() => {
     ocrProgress.value = 0
   }
 
-  // ── NLP worker — initialize with ready-state tracking ────────
-  // nlpReady gates any postMessage calls until models are loaded.
-  // nlpQueue holds jobs that arrived before models were ready.
   nlpWorker = new NlpWorker()
 
   nlpWorker.onmessage = async (e) => {
@@ -100,8 +88,6 @@ onMounted(() => {
 
     if (msg.type === 'progress') {
       nlpStatus.value = msg.status
-
-      // Models fully loaded — drain any queued jobs
       if (msg.stage === 'ready') {
         nlpReady.value = true
         console.log('[CameraCapture] NLP ready, draining queue:', nlpQueue.length)
@@ -117,7 +103,6 @@ onMounted(() => {
       console.error('[NLP] Error:', msg.error)
       nlpStatus.value = null
       nlpBusy.value = false
-      // Use the job at front of processing slot
       const job = currentNlpJob.value
       if (job) {
         await saveDocumentFallback(job.text, job.cvFeatures)
@@ -157,7 +142,6 @@ onBeforeUnmount(() => {
   nlpWorker?.terminate()
 })
 
-// ─── Camera ───────────────────────────────────────────────────
 async function startCamera() {
   cameraError.value = null
   try {
@@ -167,9 +151,7 @@ async function startCamera() {
     videoEl.value.srcObject = stream.value
     await videoEl.value.play()
   } catch (err) {
-    cameraError.value = err.name === 'NotAllowedError'
-      ? 'Camera permission denied. Please allow camera access and refresh.'
-      : 'Could not start camera: ' + err.message
+    cameraError.value = err.name === 'NotAllowedError'? 'Camera permission denied. Please allow camera access and refresh.': 'Could not start camera: ' + err.message
   }
 }
 
@@ -177,7 +159,6 @@ function stopCamera() {
   stream.value?.getTracks().forEach(t => t.stop())
 }
 
-// ─── Capture from camera ──────────────────────────────────────
 function captureFrame() {
   captureError.value = null
 
@@ -206,7 +187,6 @@ function captureFrame() {
   processImage(canvas.toDataURL('image/jpeg', 0.92))
 }
 
-// ─── File upload ──────────────────────────────────────────────
 function triggerFileInput() {
   fileInputEl.value?.click()
 }
@@ -215,20 +195,17 @@ function handleFileUpload(event) {
   const file = event?.target?.files?.[0]
   if (!file) return
   
-  // Check if it's a PDF
   if (isPdfFile(file)) {
     showPdfUploader.value = true
     return
   }
   
-  // Handle regular image files
   const reader = new FileReader()
   reader.onload = (e) => processImage(e.target.result)
   reader.readAsDataURL(file)
   event.target.value = ''
 }
 
-// ─── PDF Handling ─────────────────────────────────────────────
 function handlePdfPagesSelected(pages) {
   pdfPages.value = pages
   currentPdfPageIndex.value = 0
@@ -259,7 +236,6 @@ function processNextPdfPage() {
   }
 }
 
-// ─── Shared preprocessing entry ───────────────────────────────
 function processImage(dataUrl) {
   capturedImage.value = dataUrl
   processedImage.value = null
@@ -271,7 +247,6 @@ function processImage(dataUrl) {
   preprocessWorker.postMessage({ imageDataURL: dataUrl })
 }
 
-// ─── OCR ──────────────────────────────────────────────────────
 function runOCR() {
   if (!processedImage.value) return
   ocrText.value = null
@@ -285,25 +260,21 @@ function runOCR() {
   })
 }
 
-// ─── NLP job queue helpers ────────────────────────────────────
 function enqueueNlpJob(text, cvFeatures, image) {
   const job = { text, cvFeatures, image }
 
   if (!nlpReady.value) {
-    // Models still loading — queue the job, will be drained on 'ready'
     console.log('[CameraCapture] NLP not ready yet, queuing job')
     nlpQueue.push(job)
     return
   }
 
   if (nlpBusy.value) {
-    // Worker busy with another job — queue this one
     console.log('[CameraCapture] NLP busy, queuing job. Queue length:', nlpQueue.length)
     nlpQueue.push(job)
     return
   }
 
-  // Worker ready and free — send immediately
   dispatchNlpJob(job)
 }
 
@@ -323,7 +294,6 @@ function processNextNlpJob() {
   dispatchNlpJob(next)
 }
 
-// ─── Save pipeline ────────────────────────────────────────────
 async function saveDocument(rawText) {
   if (!isValidOcrOutput(rawText)) {
     console.warn('OCR output too noisy, skipping save')
@@ -339,7 +309,6 @@ async function saveDocument(rawText) {
     const cleanedText = cleanOcrText(rawText)
     const cvFeatures = await extractCvFeatures(processedImage.value)
 
-    // Enqueue — handles not-ready and busy states automatically
     enqueueNlpJob(cleanedText, cvFeatures, processedImage.value)
 
   } catch (err) {
@@ -350,7 +319,6 @@ async function saveDocument(rawText) {
   }
 }
 
-// Called when NLP worker returns successfully
 async function saveDocumentWithNlp(cleanedText, extracted, category) {
   try {
     await documentStore.add({
@@ -372,7 +340,6 @@ async function saveDocumentWithNlp(cleanedText, extracted, category) {
   }
 }
 
-// Fallback if NLP worker fails — uses regex extraction
 async function saveDocumentFallback(cleanedText, cvFeatures) {
   console.warn('[CameraCapture] NLP failed, using regex fallback')
   try {
@@ -399,7 +366,6 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
   }
 }
 
-// ─── Clear ────────────────────────────────────────────────────
 function clearImages() {
   capturedImage.value = null
   processedImage.value = null
@@ -409,12 +375,10 @@ function clearImages() {
   isSaved.value = false
   saveError.value = null
   captureError.value = null
-  // Clear PDF data
   pdfPages.value = []
   currentPdfPageIndex.value = 0
   showPdfUploader.value = false
 }
-
 
 const showCamera = ref(true)
 
@@ -430,62 +394,36 @@ async function toggleCamera() {
 }
 
 </script>
-
 <template>
-  <!-- <div class="min-h-screen bg-black text-white"> -->
-    <div class="w-full p-6 max-w-4xl space-y-5 ">
+<div class="w-full p-6 max-w-4xl space-y-5 ">
 
-      <!-- Page header -->
-      <div class="mb-2">
-        <!-- <h1 class="text-2xl font-semibold mb-1">Scan Document</h1> -->
+  <div class="mb-2">
         <p class="text-gray-600 dark:text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
-      </div>
-
-      <!-- ── Camera Card ── -->
-        <!-- ── Camera Card ── -->
-<div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-
-  <!-- Toggle header -->
-  <div class="flex items-center justify-between px-4 pt-4 pb-2">
-    <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Camera</p>
-<button
-  @click="toggleCamera"
-  class="text-xs px-3 py-1.5 rounded-lg border transition-colors"
-  :class="showCamera
-    ? 'border-red-800 text-red-400 hover:border-red-600'
-    : 'border-green-800 text-green-400 hover:border-green-600'"
->
-  {{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
-</button>
   </div>
 
-  <!-- Camera error -->
-  <div
-    v-if="cameraError"
-    class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2"
-  >
+  <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-4 pt-4 pb-2">
+      <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Camera</p>
+      <button @click="toggleCamera" class="text-xs px-3 py-1.5 rounded-lg border transition-colors" :class="showCamera
+          ? 'border-red-800 text-red-400 hover:border-red-600': 'border-green-800 text-green-400 hover:border-green-600'" >{{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
+      </button>
+  </div>
+
+  <div v-if="cameraError" class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2">
     <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
     </svg>
     {{ cameraError }}
   </div>
 
-  <!-- Video feed — toggled -->
   <div v-show="showCamera" class="relative bg-black">
-    <video
-      ref="videoEl"
-      class="w-full max-h-[360px] object-cover block"
-      autoplay
-      playsinline
-      muted
-    />
+    <video ref="videoEl" class="w-full max-h-[360px] object-cover block" autoplay playsinlinemuted/>
     <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
       <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
       <span class="text-white text-xs font-medium">LIVE</span>
     </div>
   </div>
 
-  <!-- Capture error -->
   <div
     v-if="captureError"
     class="mx-4 mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-sm text-yellow-400"
@@ -493,7 +431,6 @@ async function toggleCamera() {
     {{ captureError }}
   </div>
 
-  <!-- Action buttons -->
   <div class="p-4 flex gap-3">
     <button
       @click="captureFrame"
@@ -523,178 +460,117 @@ async function toggleCamera() {
     />
   </div>
 </div>
-
-      <!-- ── PDF Uploader Modal ── -->
-      <div v-if="showPdfUploader" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-gray-50 dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-          <PdfUploader 
+  <div v-if="showPdfUploader" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-gray-50 dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <PdfUploader 
             @pages-selected="handlePdfPagesSelected"
             @cancel="handlePdfCancel"
           />
-        </div>
-      </div>
+   </div>
+  </div>
 
-      <!-- ── PDF Page Navigation ── -->
-      <div v-if="pdfPages.length > 1" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <div class="flex items-center justify-between mb-3">
-          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">PDF Page Navigation</p>
-          <span class="text-xs text-gray-500">
-            Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}
-          </span>
-        </div>
+  <div v-if="pdfPages.length > 1" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+  <div class="flex items-center justify-between mb-3">
+  <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">PDF Page Navigation</p>
+  <span class="text-xs text-gray-500">Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}</span>
+  </div>
         
-        <div class="flex gap-3">
-          <button
-            @click="processPreviousPdfPage"
-            :disabled="currentPdfPageIndex === 0"
-            class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+  <div class="flex gap-3">
+  <button @click="processPreviousPdfPage":disabled="currentPdfPageIndex === 0" 
+  class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Previous Page
-          </button>
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+  </svg>
+  Previous Page
+  </button>
           
-          <button
-            @click="processNextPdfPage"
-            :disabled="currentPdfPageIndex === pdfPages.length - 1"
+  <button @click="processNextPdfPage":disabled="currentPdfPageIndex === pdfPages.length - 1"
             class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
           >
-            Next Page
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </div>
+  Next Page
+  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+  </svg>
+  </button>
+  </div>
+  </div>
 
-      <!-- ── Saving indicator ── -->
-      <div
-        v-if="isSaving"
-        class="p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-400 flex items-center gap-3"
-      >
-        <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-        {{ nlpStatus ?? 'Saving document and syncing to cloud…' }}
-      </div>
+  <div v-if="isSaving" class="p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-400 flex items-center gap-3">
+    <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>{{ nlpStatus ?? 'Saving document and syncing to cloud…' }}</div>
 
-      <!-- ── Original Image ── -->
-      <div v-if="capturedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <div class="flex justify-between items-center mb-3">
-          <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Original</p>
-          <button
-            class="text-red-500 hover:text-red-400 transition text-lg"
-            title="Clear image"
-            @click="clearImages"
-          >
-            🗑️
-          </button>
-        </div>
-        <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
-      </div>
+    <div v-if="capturedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+    <div class="flex justify-between items-center mb-3">
+    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Original</p>
 
-      <!-- Language Selector -->
+    <button class="text-red-500 hover:text-red-400 transition text-lg" title="Clear image" @click="clearImages">🗑️</button>
+    </div>
+     <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
+</div>
+
 <div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
   <LanguageSelector v-model="selectedLanguage" />
 </div>
 
+<div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+<p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
+<img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
 
-      <!-- ── Preprocessed Image ── -->
-      <div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
-        <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
-        <button
-          class="w-full bg-green-600 hover:bg-green-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
-          @click="runOCR"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
+<button class="w-full bg-green-600 hover:bg-green-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2" @click="runOCR">
+  
+<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+</svg>
           Run OCR
-        </button>
-      </div>
+</button>
+</div>
 
-      <!-- ── OCR Progress ── -->
-      <div
-        v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText"
-        class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4"
-      >
-        <div class="flex items-center gap-3 mb-3">
-          <div class="w-4 h-4 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+  <div class="flex items-center gap-3 mb-3">
+    <div class="w-4 h-4 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
           <span class="text-sm text-gray-700 dark:text-gray-300">Extracting text from document…</span>
-        </div>
-        <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
-          <div
-            class="h-full bg-blue-500 transition-all duration-300"
-            :style="{ width: `${ocrProgress}%` }"
-          ></div>
-        </div>
-        <p class="text-xs text-gray-500 mt-2 text-right">{{ ocrProgress }}%</p>
-      </div>
-
-      <!-- ── OCR Output ── -->
-      <div v-if="ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-        <div class="flex items-center justify-between mb-3">
-          <p class="font-semibold text-gray-900 dark:text-gray-200">OCR Output</p>
-          <div class="flex items-center gap-2">
-            <span
-              v-if="ocrConfidence !== null"
-              class="text-xs px-2.5 py-1 rounded-full border"
-              :class="ocrConfidence >= 80
-                ? 'bg-green-900/30 text-green-400 border-green-800'
-                : ocrConfidence >= 60
-                  ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800'
-                  : 'bg-red-900/30 text-red-400 border-red-800'"
-            >
-              {{ ocrConfidence }}% confidence
-            </span>
-            <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
-              Complete
-            </span>
-          </div>
-        </div>
-        <pre class="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-gray-100 dark:bg-black p-4 rounded-lg">{{ ocrText }}</pre>
-      </div>
-
-      <!-- ── Save error ── -->
-      <div
-        v-if="saveError"
-        class="p-4 bg-red-900/20 border border-red-800 rounded-xl text-sm text-red-400"
-      >
-        {{ saveError }}
-      </div>
-
-      <!-- ── Success ── -->
-      <div
-        v-if="isSaved"
-        class="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-400 flex items-center gap-3"
-      >
-        <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-        </svg>
-        <div>
-          <p class="font-medium">Document saved!</p>
-          <p class="text-xs opacity-75 mt-0.5">Saved locally and syncing to cloud in background.</p>
-        </div>
-        <NuxtLink
-          to="/"
-          class="ml-auto text-green-400 hover:underline font-semibold text-sm whitespace-nowrap"
-        >
-          View Dashboard →
-        </NuxtLink>
-      </div>
-
-      <!-- ── Sync status ── -->
-      <div
-        v-if="documentStore?.syncing"
-        class="text-xs text-gray-500 text-center flex items-center justify-center gap-1.5"
-      >
-        <div class="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin"></div>
-        Syncing to Supabase…
-      </div>
-      <div v-if="documentStore?.syncError" class="text-xs text-red-400 text-center">
-        Sync failed: {{ documentStore.syncError }} — saved locally, will retry on next load.
-      </div>
-
     </div>
-  <!-- </div> -->
+    <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+        <div class="h-full bg-blue-500 transition-all duration-300":style="{ width: `${ocrProgress}%` }"></div>
+    </div>
+        <p class="text-xs text-gray-500 mt-2 text-right">{{ ocrProgress }}%</p>
+    </div>
+
+      <div v-if="ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+      <div class="flex items-center justify-between mb-3">
+      <p class="font-semibold text-gray-900 dark:text-gray-200">OCR Output</p>
+      <div class="flex items-center gap-2">
+        <span v-if="ocrConfidence !== null" class="text-xs px-2.5 py-1 rounded-full border":class="ocrConfidence >= 80 ? 'bg-green-900/30 text-green-400 border-green-800'
+                : ocrConfidence >= 60 ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800': 'bg-red-900/30 text-red-400 border-red-800'">
+        {{ ocrConfidence }}% confidence
+        </span>
+
+       <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
+        Complete
+       </span>
+      </div>
+  </div>
+<pre class="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-gray-100 dark:bg-black p-4 rounded-lg">{{ ocrText }}</pre>
+</div>
+
+<div v-if="saveError" class="p-4 bg-red-900/20 border border-red-800 rounded-xl text-sm text-red-400">{{ saveError }}</div>
+
+<div v-if="isSaved" class="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-400 flex items-center gap-3">
+  <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+  </svg>
+
+  <div> <p class="font-medium">Document saved!</p> <p class="text-xs opacity-75 mt-0.5">Saved locally and syncing to cloud in background.</p> </div>
+  <NuxtLink to="/" class="ml-auto text-green-400 hover:underline font-semibold text-sm whitespace-nowrap">
+  View Dashboard →
+  </NuxtLink>
+  </div>
+
+<div v-if="documentStore?.syncing" class="text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
+<div class="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin"></div>Syncing to Supabase…</div>
+
+ <div v-if="documentStore?.syncError" class="text-xs text-red-400 text-center">
+        Sync failed: {{ documentStore.syncError }} — saved locally, will retry on next load.
+  </div>
+</div>
 </template>

@@ -5,8 +5,6 @@ defineProps({
     required: true
   }
 })
-
-// Format date for display
 const formatDate = (dateString) => {
   if (!dateString) return '—'
   try {
@@ -20,8 +18,6 @@ const formatDate = (dateString) => {
     return dateString
   }
 }
-
-// Get category badge color
 const getCategoryColor = (type) => {
   const colors = {
     invoice: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
@@ -30,8 +26,6 @@ const getCategoryColor = (type) => {
   }
   return colors[type] || colors.other
 }
-
-// Format confidence as percentage
 const formatConfidence = (confidence) => {
   return `${Math.round(confidence * 100)}%`
 }
@@ -39,16 +33,12 @@ const formatConfidence = (confidence) => {
 
 <template>
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-    
-    <!-- Image -->
     <div class="relative bg-gray-100 dark:bg-gray-800">
       <img
         :src="doc.image"
         :alt="doc.extracted.vendor || 'Document'"
         class="w-full object-cover max-h-48"
       />
-      
-      <!-- Category Badge -->
       <div class="absolute top-3 right-3">
         <span 
           :class="getCategoryColor(doc.category?.type)"
@@ -57,8 +47,6 @@ const formatConfidence = (confidence) => {
           {{ doc.category?.type || 'unknown' }}
         </span>
       </div>
-
-      <!-- Confidence Badge (if available) -->
       <div 
         v-if="doc.category?.confidence" 
         class="absolute top-3 left-3"
@@ -68,19 +56,13 @@ const formatConfidence = (confidence) => {
         </span>
       </div>
     </div>
-
-    <!-- Content -->
     <div class="p-4">
-      
-      <!-- Vendor Name (if available) -->
       <h3 
         v-if="doc.extracted.vendor" 
         class="text-lg font-semibold text-gray-900 dark:text-white mb-3 truncate"
       >
         {{ doc.extracted.vendor }}
       </h3>
-
-      <!-- Extracted Fields -->
       <div class="space-y-2 text-sm">
         <div 
           v-if="doc.extracted.date"
@@ -109,8 +91,6 @@ const formatConfidence = (confidence) => {
             {{ doc.extracted.receiptNumber || doc.extracted.invoiceNumber || '—' }}
           </span>
         </div>
-
-        <!-- Additional fields if available -->
         <div 
           v-if="doc.extracted.invoiceNumber && doc.category?.type === 'invoice'"
           class="flex justify-between items-center"
@@ -121,15 +101,11 @@ const formatConfidence = (confidence) => {
           </span>
         </div>
       </div>
-
-      <!-- Timestamp -->
       <div class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
         <p class="text-xs text-gray-500 dark:text-gray-400">
           Scanned {{ new Date(doc.createdAt).toLocaleString() }}
         </p>
       </div>
-
-      <!-- Raw OCR Accordion -->
       <details class="mt-3 group">
         <summary class="cursor-pointer text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 font-medium flex items-center gap-1 select-none">
           <svg 
@@ -146,7 +122,6 @@ const formatConfidence = (confidence) => {
           <pre class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">{{ doc.cleanedText || doc.ocrText || 'No text available' }}</pre>
         </div>
       </details>
-
     </div>
   </div>
 </template>

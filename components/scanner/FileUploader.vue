@@ -1,11 +1,9 @@
 <script setup>
 const emit = defineEmits(['upload'])
-
 function handleChange(event) {
   emit('upload', event)
 }
 </script>
-
 <template>
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm p-4">
     <label class="block cursor-pointer">

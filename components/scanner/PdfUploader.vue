@@ -3,7 +3,6 @@ import { ref, computed } from 'vue'
 import { usePdfProcessor } from '~/composables/usePdfProcessor'
 
 const emit = defineEmits(['pages-selected', 'cancel'])
-
 const { 
   isProcessing, 
   progress, 
@@ -23,12 +22,10 @@ const processingOptions = ref({
   outputFormat: 'png'
 })
 
-// Computed
 const hasPages = computed(() => pdfPages.value.length > 0)
 const selectedCount = computed(() => selectedPages.value.size)
 const canProceed = computed(() => selectedCount.value > 0)
 
-// File handling
 const triggerFileInput = () => {
   fileInputEl.value?.click()
 }
@@ -37,7 +34,6 @@ const handleFileUpload = async (event) => {
   const file = event?.target?.files?.[0]
   if (!file) return
 
-  // Validate file
   const validation = validatePdfFile(file)
   if (!validation.valid) {
     alert(validation.error)
@@ -47,7 +43,6 @@ const handleFileUpload = async (event) => {
   pdfFile.value = file
   await processPdfFile(file)
   
-  // Clear input
   event.target.value = ''
 }
 
@@ -71,7 +66,6 @@ const processPdfFile = async (file) => {
   }
 }
 
-// Page selection
 const togglePageSelection = (pageNumber) => {
   if (selectedPages.value.has(pageNumber)) {
     selectedPages.value.delete(pageNumber)
@@ -90,7 +84,6 @@ const deselectAllPages = () => {
   selectedPages.value.clear()
 }
 
-// Actions
 const proceedWithSelected = () => {
   const selected = pdfPages.value.filter(page => 
     selectedPages.value.has(page.pageNumber)
@@ -105,7 +98,6 @@ const cancel = () => {
   emit('cancel')
 }
 
-// Drag and drop
 const isDragging = ref(false)
 
 const handleDragOver = (e) => {
@@ -131,7 +123,6 @@ const handleDrop = async (e) => {
       alert(validation.error)
       return
     }
-    // Pass the File object directly — same as handleFileUpload
     pdfFile.value = droppedFile
     await processPdfFile(droppedFile)
   } else {
@@ -142,20 +133,16 @@ const handleDrop = async (e) => {
 
 <template>
   <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
-    
-    <!-- Header -->
+   
     <div class="p-4 border-b border-gray-800">
       <h3 class="text-lg font-semibold text-white mb-1">PDF Document Upload</h3>
       <p class="text-sm text-gray-400">Upload a PDF and select pages to scan</p>
     </div>
-
-    <!-- Upload Area -->
+    
     <div v-if="!hasPages && !isProcessing" class="p-6">
       <div
         class="border-2 border-dashed rounded-lg p-8 text-center transition-colors"
-        :class="isDragging 
-          ? 'border-blue-500 bg-blue-500/10' 
-          : 'border-gray-700 hover:border-gray-600'"
+        :class="isDragging ? 'border-blue-500 bg-blue-500/10' : 'border-gray-700 hover:border-gray-600'"
         @dragover="handleDragOver"
         @dragleave="handleDragLeave"
         @drop="handleDrop"
@@ -187,14 +174,12 @@ const handleDrop = async (e) => {
         @change="handleFileUpload"
       />
     </div>
-
-    <!-- Processing Progress -->
+    
     <div v-if="isProcessing" class="p-6">
       <div class="flex items-center gap-3 mb-4">
         <div class="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
         <span class="text-gray-300">{{ progress?.status || 'Processing PDF...' }}</span>
       </div>
-      
       <div class="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
         <div
           class="h-full bg-blue-500 transition-all duration-300"
@@ -209,8 +194,7 @@ const handleDrop = async (e) => {
         </span>
       </div>
     </div>
-
-    <!-- Error Display -->
+    
     <div v-if="error" class="p-4 bg-red-900/20 border-t border-red-800">
       <div class="flex items-center gap-2 text-red-400 text-sm">
         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -220,10 +204,9 @@ const handleDrop = async (e) => {
       </div>
     </div>
 
-    <!-- Page Selection -->
+   
     <div v-if="hasPages && !isProcessing" class="p-4">
       
-      <!-- Selection Controls -->
       <div class="flex justify-between items-center mb-4">
         <div class="text-sm text-gray-400">
           {{ selectedCount }}/{{ pdfPages.length }} pages selected
@@ -245,7 +228,7 @@ const handleDrop = async (e) => {
         </div>
       </div>
 
-      <!-- Page Grid -->
+      
       <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-4 max-h-96 overflow-y-auto">
         <div
           v-for="page in pdfPages"
@@ -256,19 +239,19 @@ const handleDrop = async (e) => {
             : 'border-gray-700 hover:border-gray-600'"
           @click="togglePageSelection(page.pageNumber)"
         >
-          <!-- Page Image -->
+         
           <img
             :src="page.image"
             :alt="`Page ${page.pageNumber}`"
             class="w-full h-24 object-cover bg-gray-800"
           />
           
-          <!-- Page Number -->
+         
           <div class="absolute top-1 left-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
             {{ page.pageNumber }}
           </div>
           
-          <!-- Selection Indicator -->
+         
           <div
             v-if="selectedPages.has(page.pageNumber)"
             class="absolute top-1 right-1 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center"
@@ -280,7 +263,7 @@ const handleDrop = async (e) => {
         </div>
       </div>
 
-      <!-- Action Buttons -->
+      
       <div class="flex gap-3">
         <button
           @click="proceedWithSelected"
