@@ -9,8 +9,7 @@ export const useDocumentStore = defineStore('documents', () => {
   const syncing = ref(false)
   const syncError = ref<string | null>(null)
 
-  //Helpers 
-
+  // Resolve active authenticated user before sync operations
   async function getCurrentUserId(): Promise<string | null> {
     try {
       const supabase = getSupabase()
@@ -28,15 +27,12 @@ export const useDocumentStore = defineStore('documents', () => {
       .toArray()
   }
 
-  //  Load
-
   async function loadAll() {
     await reloadLocal()
     await pullFromSupabase()
   }
 
-  // Pull from Supabase 
-
+  // Pull remote records and merge missing local entries
   async function pullFromSupabase() {
     const userId = await getCurrentUserId()
     if (!userId) return
@@ -92,9 +88,6 @@ export const useDocumentStore = defineStore('documents', () => {
       console.error('[Store] Pull failed:', err)
     }
   }
-
-  // Add 
-
   async function add(doc: Omit<DocumentRecord, 'id' | 'supabaseId'>) {
     const userId = await getCurrentUserId()
 
@@ -111,8 +104,7 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // Push to Supabase 
-
+  // Push local record after capture
   async function pushToSupabase(localId: number, userId: string) {
     syncing.value = true
     syncError.value = null
@@ -130,16 +122,13 @@ export const useDocumentStore = defineStore('documents', () => {
           image: record.image,
           ocr_text: record.ocrText,
           cleaned_text: record.cleanedText,
-          // Core extracted fields
           vendor: record.extracted?.vendor ?? null,
           date: record.extracted?.date ?? null,
           total: record.extracted?.total ?? null,
           receipt_number: record.extracted?.receiptNumber ?? null,
-          // New NLP-extracted fields
           tax: record.extracted?.tax ?? null,
           payment_method: record.extracted?.paymentMethod ?? null,
           items: record.extracted?.items ?? null,
-          // Classification
           category: record.category?.type ?? 'other',
           nlp_label: record.category?.nlpLabel ?? null,
           category_confidence: record.category?.confidence ?? 0,
@@ -168,8 +157,6 @@ export const useDocumentStore = defineStore('documents', () => {
     }
   }
 
-  // Sync pending 
-
   async function syncPending() {
     const userId = await getCurrentUserId()
     if (!userId) return
@@ -182,8 +169,6 @@ export const useDocumentStore = defineStore('documents', () => {
       if (record.id) await pushToSupabase(record.id, userId)
     }
   }
-
-  // Remove 
 
   async function remove(id: number) {
     const record = await db.documents.get(id)
@@ -200,8 +185,6 @@ export const useDocumentStore = defineStore('documents', () => {
     await db.documents.delete(id)
     await reloadLocal()
   }
-
-  // Getters 
 
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => b.createdAt - a.createdAt)

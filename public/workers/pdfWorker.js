@@ -1,20 +1,11 @@
-// public/workers/pdfWorker.js
-// Converts PDF pages to images for OCR pipeline
-
+// Converts PDF pages to images inside a dedicated worker for OCR pipeline
 console.log('[PDF Worker] Starting...')
 
-// Import PDF.js — must use the worker build which is self-contained
-// and does not require 'document' or DOM APIs
+// load pdf.js worker-safe bundles
 importScripts('/pdfjs/pdf.worker.min.js')
-
-// At this point pdfjsWorker is available — PDF.js worker build
-// exports itself as a worker, so we use it directly
-// But we still need the main pdf.min.js API
 importScripts('/pdfjs/pdf.min.js')
 
-// Setting workerSrc to empty string tells PDF.js:
-// "don't try to spawn another worker — run synchronously in this thread"
-// This is required when already inside a Web Worker context
+// Prevent nested worker creation
 if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 }
@@ -46,7 +37,6 @@ self.onmessage = async (e) => {
       data: pdfData,
       disableFontFace: true,
       useSystemFonts: true,
-      // Prevent PDF.js from trying to use worker internally
       isEvalSupported: false,
     })
 
@@ -95,6 +85,7 @@ self.onmessage = async (e) => {
         })
 
         const progress = 0.2 + (pageNum / numPages) * 0.7
+        
         self.postMessage({
           type: 'progress',
           progress,

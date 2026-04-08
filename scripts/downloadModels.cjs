@@ -1,9 +1,8 @@
-
-//  uses dynamic import() to load ESM @xenova/transformers
-
 const path = require('path')
 const fs = require('fs')
+
 require('dotenv').config()
+
 const PUBLIC_MODELS_DIR = path.join(__dirname, '..', 'public', 'models')
 
 if (!fs.existsSync(PUBLIC_MODELS_DIR)) {
@@ -12,7 +11,6 @@ if (!fs.existsSync(PUBLIC_MODELS_DIR)) {
 }
 
 async function main() {
-  // Dynamic import works in CJS to load ESM modules
   const { env, pipeline } = await import('@xenova/transformers')
 
   env.cacheDir = PUBLIC_MODELS_DIR
@@ -21,7 +19,6 @@ async function main() {
   env.allowLocalModels = true
   env.hfToken = process.env.HF_TOKEN
 
-  //add huggingface token
   console.log('\n Downloading models to:', PUBLIC_MODELS_DIR)
   console.log('This runs once — models work fully offline after.\n')
 
@@ -38,27 +35,29 @@ async function main() {
   }
 ]
 
-
   for (const { task, model, label } of models) {
     console.log(`⬇ ${label}`)
     console.log(`   Model: ${model}`)
 
     try {
       await pipeline(task, model, {
-  progress_callback: (p) => {
-    if (p.status === 'downloading') {
-      const pct = p.progress != null ? p.progress.toFixed(1) + '%' : '...'
-      process.stdout.write(`\r   ${p.file ?? ''} — ${pct}        `)
-    }
-    if (p.status === 'done') {
-      process.stdout.write(`\r   ✓ ${p.file ?? 'file'} done          \n`)
-    }
-  }
-})
+      progress_callback: (progress) => {
+        if (progress.status === 'downloading') {
+          const pct = progress.progress != null ? progress.progress.toFixed(1) + '%' : '...'
+          process.stdout.write(`\r   ${p.file ?? ''} — ${pct}        `)
+        }
 
-      console.log(` ${label} ready\n`)
-    } catch (err) {
-      console.error(`\n❌ Failed: ${label}`)
+        if (p.status === 'done') {
+          process.stdout.write(`\r   ${p.file ?? 'file'} done          \n`)
+        }
+    }
+    })
+
+    console.log(` ${label} ready\n`)
+    } 
+    catch (err) 
+    {
+      console.error(`\n Failed: ${label}`)
       console.error('   Error:', err.message)
       continue
     }
