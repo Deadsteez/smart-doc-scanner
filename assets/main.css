@@ -93,12 +93,16 @@
 
   /* Glassmorphism: Lightweight, readability-safe, subtle borders */
   .glass-panel {
-    @apply bg-bg-secondary/70 backdrop-blur-md border border-slate-1/40 shadow-sm;
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 70%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 40%, transparent);
+    @apply backdrop-blur-md shadow-sm;
   }
 
   /* Cards & Modals: Elevated, soft borders, rounded-xl */
   .surface-elevated {
-    @apply bg-bg-elevated border border-slate-1/50 rounded-xl shadow-lg shadow-black/5;
+    background-color: var(--color-bg-elevated);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    @apply rounded-xl shadow-lg shadow-black/5;
   }
 
   /* ─── Inputs & Forms ─── */
@@ -109,19 +113,35 @@
   }
   
   .input-base:focus {
-    @apply border-accent-primary ring-1 ring-accent-primary/20 shadow-[0_0_0_2px_rgba(14,165,233,0.1)];
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 50%, transparent), 
+                0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 15%, transparent);
+    @apply outline-none;
   }
 
   /* ─── Buttons ─── */
 
   /* Primary CTAs: Strong contrast, soft shadow, rounded-xl */
   .btn-primary {
-    @apply inline-flex items-center justify-center rounded-xl bg-accent-primary text-white font-medium px-5 py-2.5 transition-all duration-200 shadow-md shadow-accent-primary/20 hover:bg-sky-500 hover:shadow-lg hover:shadow-accent-primary/30 active:scale-[0.98];
+    @apply inline-flex items-center justify-center rounded-xl bg-accent-primary text-white font-medium px-5 py-2.5 transition-all duration-200 hover:bg-sky-500 active:scale-[0.98];
+    /* Using static rgba since accent-primary (#0EA5E9) doesn't change in dark mode */
+    box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.2);
+  }
+  
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
   }
 
   /* Secondary Buttons: Muted, contextual */
   .btn-secondary {
-    @apply inline-flex items-center justify-center rounded-xl bg-bg-tertiary text-text-primary border border-slate-1/50 font-medium px-5 py-2.5 transition-all duration-200 hover:bg-slate-1/30 hover:border-slate-1 active:scale-[0.98];
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    @apply inline-flex items-center justify-center rounded-xl text-text-primary font-medium px-5 py-2.5 transition-all duration-200 active:scale-[0.98];
+  }
+  
+  .btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--color-slate-1) 30%, transparent);
+    border-color: var(--color-slate-1);
   }
 
   /* ─── Ambient Glow Effects ─── */
