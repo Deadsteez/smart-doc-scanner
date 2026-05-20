@@ -395,30 +395,30 @@ async function toggleCamera() {
 
 </script>
 <template>
-<div class="w-full p-6 max-w-4xl space-y-5 ">
+<div class="w-full p-6 max-w-4xl space-y-5">
 
   <div class="mb-2">
-        <p class="text-gray-600 dark:text-gray-400 text-sm">Capture or upload a document to extract and classify data.</p>
+        <p class="text-text-muted text-sm">Capture or upload a document to extract and classify data.</p>
   </div>
 
-  <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
+  <div class="bg-bg-secondary border border-slate-1/40 rounded-xl overflow-hidden">
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
-      <p class="text-sm font-medium text-gray-700 dark:text-gray-300">Camera</p>
+      <p class="text-sm font-medium text-text-secondary">Camera</p>
       <button @click="toggleCamera" class="text-xs px-3 py-1.5 rounded-lg border transition-colors" :class="showCamera
-          ? 'border-red-800 text-red-400 hover:border-red-600': 'border-green-800 text-green-400 hover:border-green-600'" >{{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
+          ? 'border-error/40 text-error hover:border-error/70': 'border-success/40 text-success hover:border-success/70'" >{{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
       </button>
   </div>
 
-  <div v-if="cameraError" class="m-4 p-3 bg-red-900/30 border border-red-800 rounded-lg text-sm text-red-400 flex items-center gap-2">
+  <div v-if="cameraError" class="m-4 p-3 bg-error/10 border border-error/30 rounded-lg text-sm text-error flex items-center gap-2">
     <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
     </svg>
     {{ cameraError }}
   </div>
 
-  <div v-show="showCamera" class="relative bg-black">
+  <div v-show="showCamera" class="relative bg-bg-primary">
     <video ref="videoEl" class="w-full max-h-[360px] object-cover block" autoplay playsinlinemuted/>
-    <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-black/50 backdrop-blur-sm px-2.5 py-1 rounded-full">
+    <div class="absolute top-3 left-3 flex items-center gap-1.5 bg-bg-primary/60 backdrop-blur-sm px-2.5 py-1 rounded-full">
       <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
       <span class="text-white text-xs font-medium">LIVE</span>
     </div>
@@ -426,7 +426,7 @@ async function toggleCamera() {
 
   <div
     v-if="captureError"
-    class="mx-4 mt-4 p-3 bg-yellow-900/30 border border-yellow-800 rounded-lg text-sm text-yellow-400"
+    class="mx-4 mt-4 p-3 bg-warning/10 border border-warning/30 rounded-lg text-sm text-warning"
   >
     {{ captureError }}
   </div>
@@ -434,7 +434,7 @@ async function toggleCamera() {
   <div class="p-4 flex gap-3">
     <button
       @click="captureFrame"
-      class="flex-1 bg-blue-600 hover:bg-blue-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2"
+      class="flex-1 bg-accent-primary hover:bg-accent-primary/90 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-glow-cyan"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -444,7 +444,7 @@ async function toggleCamera() {
     </button>
     <button
       @click="triggerFileInput"
-      class="flex-1 bg-gray-800 hover:bg-gray-700 active:scale-95 text-gray-200 font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-gray-700"
+      class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-slate-1/40"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -460,8 +460,8 @@ async function toggleCamera() {
     />
   </div>
 </div>
-  <div v-if="showPdfUploader" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-gray-50 dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+  <div v-if="showPdfUploader" class="fixed inset-0 bg-bg-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+  <div class="bg-bg-secondary border border-slate-1/40 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-elevated">
       <PdfUploader 
             @pages-selected="handlePdfPagesSelected"
             @cancel="handlePdfCancel"
@@ -469,15 +469,15 @@ async function toggleCamera() {
    </div>
   </div>
 
-  <div v-if="pdfPages.length > 1" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+  <div v-if="pdfPages.length > 1" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
   <div class="flex items-center justify-between mb-3">
-  <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">PDF Page Navigation</p>
-  <span class="text-xs text-gray-500">Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}</span>
+  <p class="text-text-secondary text-sm font-medium">PDF Page Navigation</p>
+  <span class="text-xs text-text-muted">Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}</span>
   </div>
         
   <div class="flex gap-3">
   <button @click="processPreviousPdfPage":disabled="currentPdfPageIndex === 0" 
-  class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+  class="flex-1 bg-bg-tertiary hover:bg-bg-elevated disabled:bg-bg-tertiary disabled:text-text-muted/50 text-text-secondary px-4 py-2 rounded-xl transition flex items-center justify-center gap-2"
           >
   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -486,7 +486,7 @@ async function toggleCamera() {
   </button>
           
   <button @click="processNextPdfPage":disabled="currentPdfPageIndex === pdfPages.length - 1"
-            class="flex-1 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-800 disabled:text-gray-600 text-gray-200 px-4 py-2 rounded-lg transition flex items-center justify-center gap-2"
+            class="flex-1 bg-bg-tertiary hover:bg-bg-elevated disabled:bg-bg-tertiary disabled:text-text-muted/50 text-text-secondary px-4 py-2 rounded-xl transition flex items-center justify-center gap-2"
           >
   Next Page
   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -496,27 +496,27 @@ async function toggleCamera() {
   </div>
   </div>
 
-  <div v-if="isSaving" class="p-4 bg-blue-900/20 border border-blue-800 rounded-xl text-sm text-blue-400 flex items-center gap-3">
-    <div class="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>{{ nlpStatus ?? 'Saving document and syncing to cloud…' }}</div>
+  <div v-if="isSaving" class="p-4 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-sm text-accent-primary flex items-center gap-3">
+    <div class="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>{{ nlpStatus ?? 'Saving document and syncing to cloud…' }}</div>
 
-    <div v-if="capturedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+    <div v-if="capturedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
     <div class="flex justify-between items-center mb-3">
-    <p class="text-gray-600 dark:text-gray-400 text-sm font-medium">Original</p>
+    <p class="text-text-secondary text-sm font-medium">Original</p>
 
     <button class="text-red-500 hover:text-red-400 transition text-lg" title="Clear image" @click="clearImages">🗑️</button>
     </div>
      <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
 </div>
 
-<div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
   <LanguageSelector v-model="selectedLanguage" />
 </div>
 
-<div v-if="processedImage" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-<p class="text-gray-600 dark:text-gray-400 text-sm font-medium mb-3">Preprocessed</p>
+<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+<p class="text-text-secondary text-sm font-medium mb-3">Preprocessed</p>
 <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
 
-<button class="w-full bg-green-600 hover:bg-green-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2" @click="runOCR">
+<button class="w-full bg-accent-secondary hover:bg-accent-secondary/90 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-glow-teal" @click="runOCR">
   
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -525,51 +525,51 @@ async function toggleCamera() {
 </button>
 </div>
 
-<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
   <div class="flex items-center gap-3 mb-3">
-    <div class="w-4 h-4 border-[3px] border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-          <span class="text-sm text-gray-700 dark:text-gray-300">Extracting text from document…</span>
+    <div class="w-4 h-4 border-[3px] border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+          <span class="text-sm text-text-secondary">Extracting text from document…</span>
     </div>
-    <div class="w-full bg-gray-200 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
-        <div class="h-full bg-blue-500 transition-all duration-300":style="{ width: `${ocrProgress}%` }"></div>
+    <div class="w-full bg-bg-tertiary rounded-full h-2 overflow-hidden">
+        <div class="h-full bg-accent-primary transition-all duration-300":style="{ width: `${ocrProgress}%` }"></div>
     </div>
-        <p class="text-xs text-gray-500 mt-2 text-right">{{ ocrProgress }}%</p>
+        <p class="text-xs text-text-muted mt-2 text-right">{{ ocrProgress }}%</p>
     </div>
 
-      <div v-if="ocrText" class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl p-4">
+      <div v-if="ocrText" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
       <div class="flex items-center justify-between mb-3">
-      <p class="font-semibold text-gray-900 dark:text-gray-200">OCR Output</p>
+      <p class="font-semibold text-text-primary">OCR Output</p>
       <div class="flex items-center gap-2">
-        <span v-if="ocrConfidence !== null" class="text-xs px-2.5 py-1 rounded-full border":class="ocrConfidence >= 80 ? 'bg-green-900/30 text-green-400 border-green-800'
-                : ocrConfidence >= 60 ? 'bg-yellow-900/30 text-yellow-400 border-yellow-800': 'bg-red-900/30 text-red-400 border-red-800'">
+        <span v-if="ocrConfidence !== null" class="text-xs px-2.5 py-1 rounded-full border":class="ocrConfidence >= 80 ? 'bg-success/15 text-success border-success/30'
+                : ocrConfidence >= 60 ? 'bg-warning/15 text-warning border-warning/30': 'bg-error/15 text-error border-error/30'">
         {{ ocrConfidence }}% confidence
         </span>
 
-       <span class="text-xs px-2.5 py-1 bg-green-900/30 text-green-400 rounded-full border border-green-800">
+       <span class="text-xs px-2.5 py-1 bg-success/15 text-success rounded-full border border-success/30">
         Complete
        </span>
       </div>
   </div>
-<pre class="text-sm whitespace-pre-wrap text-gray-900 dark:text-gray-300 font-mono leading-relaxed max-h-96 overflow-y-auto bg-gray-100 dark:bg-black p-4 rounded-lg">{{ ocrText }}</pre>
+<pre class="text-sm whitespace-pre-wrap text-text-secondary font-mono leading-relaxed max-h-96 overflow-y-auto bg-bg-primary border border-slate-1/30 p-4 rounded-lg">{{ ocrText }}</pre>
 </div>
 
-<div v-if="saveError" class="p-4 bg-red-900/20 border border-red-800 rounded-xl text-sm text-red-400">{{ saveError }}</div>
+<div v-if="saveError" class="p-4 bg-error/10 border border-error/30 rounded-xl text-sm text-error">{{ saveError }}</div>
 
-<div v-if="isSaved" class="p-4 bg-green-900/20 border border-green-800 rounded-xl text-sm text-green-400 flex items-center gap-3">
+<div v-if="isSaved" class="p-4 bg-success/10 border border-success/30 rounded-xl text-sm text-success flex items-center gap-3">
   <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
   </svg>
 
   <div> <p class="font-medium">Document saved!</p> <p class="text-xs opacity-75 mt-0.5">Saved locally and syncing to cloud in background.</p> </div>
-  <NuxtLink to="/" class="ml-auto text-green-400 hover:underline font-semibold text-sm whitespace-nowrap">
+  <NuxtLink to="/" class="ml-auto text-success hover:underline font-semibold text-sm whitespace-nowrap">
   View Dashboard →
   </NuxtLink>
   </div>
 
-<div v-if="documentStore?.syncing" class="text-xs text-gray-500 text-center flex items-center justify-center gap-1.5">
-<div class="w-3 h-3 border border-gray-500 border-t-transparent rounded-full animate-spin"></div>Syncing to Supabase…</div>
+<div v-if="documentStore?.syncing" class="text-xs text-text-muted text-center flex items-center justify-center gap-1.5">
+<div class="w-3 h-3 border border-text-muted border-t-transparent rounded-full animate-spin"></div>Syncing to Supabase…</div>
 
- <div v-if="documentStore?.syncError" class="text-xs text-red-400 text-center">
+ <div v-if="documentStore?.syncError" class="text-xs text-error text-center">
         Sync failed: {{ documentStore.syncError }} — saved locally, will retry on next load.
   </div>
 </div>
