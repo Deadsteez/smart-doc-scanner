@@ -5,7 +5,7 @@ import { useDocumentStore } from '~/stores/documentStore'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
 import { usePdfProcessor } from '~/composables/usePdfProcessor'
 import PdfUploader from '~/components/scanner/PdfUploader.vue'
-import NlpWorker from '/workers/nlpWorker.js?worker'
+import NlpWorker from '~/public/workers/nlpWorker.js?worker'
 import LanguageSelector from '~/components/LanguageSelector.vue'
 
 const videoEl = ref(null)       
@@ -17,7 +17,7 @@ const processedImage = ref(null)
 const ocrText = ref(null)
 const ocrProgress = ref(0)
 const ocrConfidence = ref(null)
-const selectedLanguage = ref('eng')
+const selectedLanguage = ref('eng+hin+mar')
 
 
 const cameraError = ref(null)

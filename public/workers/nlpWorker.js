@@ -8,7 +8,7 @@ console.log('[NLP Worker] Starting...')
 env.localModelPath = '/models/'
 env.cacheDir = '/models/'
 env.allowRemoteModels = true 
-env.allowLocalModels = true
+env.allowLocalModels = false
 
 console.log('[NLP Worker] Model path:', env.localModelPath)
 

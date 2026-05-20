@@ -2,9 +2,9 @@
 <script setup>
 import { ref } from 'vue'
 
-const selectedLanguage = defineModel({ default: 'eng' })
+const selectedLanguage = defineModel({ default: 'eng+hin+mar' })
 
-const languages = [ { code: 'eng', name: 'English', flag: '🇬🇧' },{ code: 'hin', name: 'Hindi', flag: '🇮🇳' },{ code: 'mar', name: 'Marathi', flag: '🇮🇳' }]
+const languages = [ { code: 'eng+hin+mar', name: 'Auto (All)', flag: '🌐' }, { code: 'eng', name: 'English', flag: '🇬🇧' },{ code: 'hin', name: 'Hindi', flag: '🇮🇳' },{ code: 'mar', name: 'Marathi', flag: '🇮🇳' }]
 
 </script>
 

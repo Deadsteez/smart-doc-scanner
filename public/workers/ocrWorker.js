@@ -29,8 +29,6 @@ async function getScheduler(language = 'eng') {
   scheduler = Tesseract.createScheduler()
 
   const worker = await Tesseract.createWorker(language, 1, {
-    langPath: self.location.origin + '/tesseract/lang-data',
-    gzip: false,
     logger: message => {
       if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
         postMessage({ type: 'progress', progress: 0.1, status: message.status })
