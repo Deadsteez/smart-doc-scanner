@@ -15,27 +15,27 @@ export default {
       },
       colors: {
         /* ─── Background Layers ─── */
-        'bg-primary':   '#0F172A',
-        'bg-secondary': '#111827',
-        'bg-tertiary':  '#1E293B',
-        'bg-elevated':  '#243041',
+        'bg-primary':   'var(--color-bg-primary)',
+        'bg-secondary': 'var(--color-bg-secondary)',
+        'bg-tertiary':  'var(--color-bg-tertiary)',
+        'bg-elevated':  'var(--color-bg-elevated)',
 
         /* ─── Slate System ─── */
-        'slate-1': '#334155',
-        'slate-2': '#475569',
-        'slate-3': '#64748B',
+        'slate-1': 'var(--color-slate-1)',
+        'slate-2': 'var(--color-slate-2)',
+        'slate-3': 'var(--color-slate-3)',
 
         /* ─── Accent Colors ─── */
-        'accent-primary':   '#0EA5E9',
-        'accent-secondary': '#14B8A6',
-        'success':          '#10B981',
-        'warning':          '#F59E0B',
-        'error':            '#EF4444',
+        'accent-primary':   'var(--color-accent-primary)',
+        'accent-secondary': 'var(--color-accent-secondary)',
+        'success':          'var(--color-success)',
+        'warning':          'var(--color-warning)',
+        'error':            'var(--color-error)',
 
         /* ─── Text Colors ─── */
-        'text-primary':   '#F8FAFC',
-        'text-secondary': '#CBD5E1',
-        'text-muted':     '#94A3B8',
+        'text-primary':   'var(--color-text-primary)',
+        'text-secondary': 'var(--color-text-secondary)',
+        'text-muted':     'var(--color-text-muted)',
 
         /* ─── Keep old primary for backward compat ─── */
         primary: {

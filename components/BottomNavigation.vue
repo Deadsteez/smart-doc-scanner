@@ -4,8 +4,8 @@ const route = useRoute()
 const navItems = [
   { label: 'Home', icon: 'home', to: '/' },
   { label: 'Scan', icon: 'scan', to: '/scan', isCta: true },
-  { label: 'Documents', icon: 'docs', to: '/' },
-  { label: 'Profile', icon: 'profile', to: '/' },
+  { label: 'Documents', icon: 'docs', to: '/dashboard' },
+  { label: 'Profile', icon: 'profile', to: '/profile' },
 ]
 
 function isActive(to) {
