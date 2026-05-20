@@ -1,3 +1,4 @@
+/** @type {import('tailwindcss').Config} */
 export default {
   darkMode: 'class',
   content: [
@@ -6,12 +7,14 @@ export default {
     "./pages/**/*.vue",
     "./plugins/**/*.{js,ts}",
     "./app.vue",
+    "./error.vue", // Added to ensure Nuxt error pages are covered
   ],
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
-        display: ['Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        // Mapped to the CSS variables for a single source of truth
+        sans: ['var(--font-sans)', 'Inter', 'ui-sans-serif', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['var(--font-display)', 'Space Grotesk', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
       colors: {
         /* ─── Background Layers ─── */
@@ -37,7 +40,7 @@ export default {
         'text-secondary': 'var(--color-text-secondary)',
         'text-muted':     'var(--color-text-muted)',
 
-        /* ─── Keep old primary for backward compat ─── */
+        /* ─── Keep legacy primary for backward compat ─── */
         primary: {
           50:  '#eff6ff',
           100: '#dbeafe',
@@ -57,18 +60,20 @@ export default {
         '3xl': '1.5rem',
       },
       boxShadow: {
-        'glow-cyan':  '0 0 20px rgba(14, 165, 233, 0.15)',
-        'glow-teal':  '0 0 20px rgba(20, 184, 166, 0.15)',
-        'elevated':   '0 4px 24px rgba(0, 0, 0, 0.25)',
-        'card':       '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
-        'card-hover': '0 4px 12px rgba(0, 0, 0, 0.2)',
+        /* ─── Refined to match DESIGN.md (softer, lower opacity) ─── */
+        'glow-cyan':  '0 0 40px -10px rgba(14, 165, 233, 0.15)',
+        'glow-teal':  '0 0 40px -10px rgba(20, 184, 166, 0.15)',
+        'elevated':   '0 4px 20px -2px rgba(0, 0, 0, 0.15)',
+        'card':       '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+        'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
       },
       animation: {
+        /* ─── Timings tweaked for "Minimal Professional Motion" ─── */
         'spin':       'spin 1s linear infinite',
-        'fade-in':    'fadeIn 0.3s ease-out',
+        'fade-in':    'fadeIn 0.2s ease-out', // Sped up slightly for a snappier feel
         'slide-up':   'slideUp 0.3s ease-out',
         'slide-down': 'slideDown 0.3s ease-out',
-        'pulse-soft': 'pulseSoft 2s ease-in-out infinite',
+        'pulse-soft': 'pulseSoft 3s ease-in-out infinite', // Slowed down for calmer ambient effect
       },
       keyframes: {
         fadeIn: {
@@ -85,7 +90,7 @@ export default {
         },
         pulseSoft: {
           '0%, 100%': { opacity: '1' },
-          '50%':      { opacity: '0.7' },
+          '50%':      { opacity: '0.85' }, // Less aggressive dimming for readability
         },
       },
       backdropBlur: {

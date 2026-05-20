@@ -16,9 +16,9 @@ const { user } = useAuth()
       <div class="absolute top-1/4 left-1/2 -translate-x-1/2 w-3/4 h-64 bg-accent-primary/20 blur-[120px] rounded-full pointer-events-none -z-10"></div>
       
       <div class="max-w-7xl mx-auto px-6 text-center animate-slide-up">
-        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-secondary border border-slate-1/40 text-sm font-medium text-accent-primary mb-8 shadow-glow-cyan">
-          <span class="w-2 h-2 rounded-full bg-accent-primary animate-pulse"></span>
-          SmartDoc Scanner 2.0 is Live
+        <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-secondary border border-slate-1/40 text-sm font-medium text-accent-secondary mb-8 shadow-glow-cyan">
+          <span class="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+          SmartScan 1.0 is Live
         </div>
         
         <h1 class="text-5xl lg:text-7xl font-bold font-display tracking-tight mb-6">

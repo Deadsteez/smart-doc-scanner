@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useTheme } from '~/composables/useTheme'
+import { onClickOutside } from '@vueuse/core'
 
 const { user, logout } = useAuth()
 const { isDark, toggle: toggleTheme } = useTheme()
@@ -11,7 +12,26 @@ const userInitials = computed(() => {
   return email.slice(0, 2).toUpperCase()
 })
 
+
+const profileMenuRef = ref(null)
+onClickOutside(profileMenuRef, () => {
+  showProfileMenu.value = false
+})
+
+const isScrolled = ref(false)
 const showProfileMenu = ref(false)
+
+function handleScroll() {
+  isScrolled.value = window.scrollY > 10
+}
+
+onMounted(() => {
+  window.addEventListener('scroll', handleScroll)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
 
 const handleLogout = async () => {
   showProfileMenu.value = false
@@ -34,7 +54,12 @@ function closeMenuOnOutside() {
   <nav class="sticky top-0 z-50 hidden md:block">
     <div class="mx-4 mt-3">
       <div
-        class="glass-panel rounded-2xl px-6 py-3 flex items-center justify-between max-w-7xl mx-auto transition-all duration-200"
+        :class="[
+  'glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between max-w-[1440px] mx-auto transition-all duration-300 border',
+  isScrolled
+    ? 'bg-bg-primary/90 border-white/10 shadow-elevated backdrop-blur-md'
+    : 'bg-bg-primary/70 border-white/5'
+]" 
       >
         <!-- Left: Logo + Nav links -->
         <div class="flex items-center gap-8">
@@ -77,8 +102,8 @@ function closeMenuOnOutside() {
         <div class="flex items-center gap-3">
           <!-- Scan CTA button -->
           <NuxtLink
-            to="/scan"
-            class="flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-semibold rounded-xl transition-all duration-150 active:scale-95 shadow-glow-cyan"
+            
+            class="flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-glow-cyan"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -101,47 +126,80 @@ function closeMenuOnOutside() {
           </button>
 
           <!-- User section -->
-          <template v-if="user">
-            <div class="relative">
-              <button
-                @click="toggleProfileMenu"
-                class="flex items-center gap-2 p-1 rounded-lg hover:bg-bg-tertiary/40 transition-colors"
-              >
-                <div class="w-8 h-8 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-xs font-bold tracking-wide select-none ring-1 ring-accent-primary/30">
-                  {{ userInitials }}
-                </div>
-              </button>
 
-              <!-- Dropdown menu -->
-              <Transition
-                enter-active-class="transition duration-150 ease-out"
-                enter-from-class="opacity-0 translate-y-1 scale-95"
-                enter-to-class="opacity-100 translate-y-0 scale-100"
-                leave-active-class="transition duration-100 ease-in"
-                leave-from-class="opacity-100 translate-y-0 scale-100"
-                leave-to-class="opacity-0 translate-y-1 scale-95"
-              >
-                <div
-                  v-if="showProfileMenu"
-                  class="absolute right-0 top-full mt-2 w-56 glass-panel rounded-xl shadow-elevated overflow-hidden animate-fade-in"
-                  @click.stop
-                >
-                  <div class="px-4 py-3 border-b border-slate-1/40">
-                    <p class="text-sm text-text-primary font-medium truncate">{{ user.email }}</p>
-                    <p class="text-xs text-text-muted mt-0.5">Signed in</p>
-                  </div>
-                  <div class="p-1.5">
-                    <button
-                      @click="handleLogout"
-                      class="w-full text-left px-3 py-2 rounded-lg text-sm text-text-secondary hover:text-error hover:bg-error/10 transition-colors"
-                    >
-                      Sign out
-                    </button>
-                  </div>
-                </div>
-              </Transition>
-            </div>
-          </template>
+          <template v-if="user">
+  <div class="relative">
+    <!-- Avatar Button -->
+    <button
+      @click="toggleProfileMenu"
+      aria-label="Open profile menu"
+      class="flex items-center gap-2 p-1 rounded-lg hover:bg-bg-tertiary/40 transition-all duration-200"
+    >
+      <div
+        class="w-8 h-8 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-xs font-bold tracking-wide select-none ring-1 ring-accent-primary/30 hover:bg-accent-primary/30 transition-colors"
+      >
+        {{ userInitials }}
+      </div>
+    </button>
+
+    <!-- Dropdown -->
+    <Transition
+      enter-active-class="transition duration-150 ease-out"
+      enter-from-class="opacity-0 translate-y-1 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-100 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 translate-y-1 scale-95"
+    >
+      <div
+        v-if="showProfileMenu"
+        ref="profileMenuRef"
+        class="absolute right-0 top-[calc(100%+0.5rem)] w-60 rounded-2xl overflow-hidden border border-white/10 shadow-elevated bg-bg-secondary/95 backdrop-blur-xl supports-[backdrop-filter]:bg-bg-secondary/80"
+      >
+        <!-- User Info -->
+        <div class="px-4 py-3 border-b border-slate-1/30">
+          <p class="text-sm text-text-primary font-medium truncate">
+            {{ user.email }}
+          </p>
+          <p class="text-xs text-text-muted mt-1">
+            Signed in
+          </p>
+        </div>
+
+        <!-- Menu Items -->
+        <div class="p-2">
+          <NuxtLink
+            to="/profile"
+            :class="[
+            'flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors',
+            $route.path.startsWith('/profile')
+                ? 'bg-bg-tertiary/60 text-text-primary'
+                : 'text-text-secondary hover:bg-bg-tertiary/40 hover:text-text-primary'
+            ]"
+            @click="showProfileMenu = false"
+          >
+            Profile
+          </NuxtLink>
+
+          <NuxtLink
+            to="/settings"
+            class="flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-text-secondary hover:bg-bg-tertiary/40 hover:text-text-primary transition-colors"
+            @click="showProfileMenu = false"
+          >
+            Settings
+          </NuxtLink>
+
+          <button
+            @click="handleLogout"
+            class="w-full text-left px-3 py-2 rounded-xl text-sm text-error hover:bg-error/10 transition-colors"
+          >
+            Sign out
+          </button>
+        </div>
+      </div>
+    </Transition>
+  </div>
+</template>
 
           <template v-else>
             <NuxtLink
@@ -187,11 +245,15 @@ function closeMenuOnOutside() {
           </svg>
         </button>
 
-        <template v-if="user">
-          <div class="w-7 h-7 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-[10px] font-bold select-none ring-1 ring-accent-primary/30">
-            {{ userInitials }}
-          </div>
-        </template>
+<template v-if="user">
+  <NuxtLink
+    to="/profile"
+    aria-label="Go to profile"
+    class="w-7 h-7 rounded-full bg-accent-primary/20 flex items-center justify-center text-accent-primary text-[10px] font-bold select-none ring-1 ring-accent-primary/30 hover:bg-accent-primary/30 transition-colors"
+  >
+    {{ userInitials }}
+  </NuxtLink>
+</template>
       </div>
     </div>
   </nav>

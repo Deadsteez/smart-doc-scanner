@@ -5,10 +5,13 @@
 /* ─── Google Fonts ─── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
-/* ─── Base Layer Resets & Theme Variables ─── */
 @layer base {
   :root {
-    /* Light Mode (default) */
+    /* ─── Typography ─── */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+    /* ─── Light Mode (Productivity Default) ─── */
     --color-bg-primary: #F8FAFC;
     --color-bg-secondary: #FFFFFF;
     --color-bg-tertiary: #F1F5F9;
@@ -22,15 +25,15 @@
     --color-text-secondary: #334155;
     --color-text-muted: #64748B;
 
-    --color-accent-primary: #0EA5E9;
-    --color-accent-secondary: #14B8A6;
+    --color-accent-primary: #0EA5E9; /* Cyan */
+    --color-accent-secondary: #14B8A6; /* Teal */
     --color-success: #10B981;
     --color-warning: #F59E0B;
     --color-error: #EF4444;
   }
 
   .dark {
-    /* Dark Mode */
+    /* ─── Dark Mode (Deep Blue + Slate System) ─── */
     --color-bg-primary: #0F172A;
     --color-bg-secondary: #111827;
     --color-bg-tertiary: #1E293B;
@@ -46,7 +49,7 @@
   }
 
   html {
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     scroll-behavior: smooth;
@@ -56,18 +59,17 @@
     @apply bg-bg-primary text-text-primary transition-colors duration-300;
   }
 
-  /* Accessible focus rings */
+  /* ─── Accessibility & Interaction ─── */
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-accent-primary;
+    @apply outline-none ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary;
   }
 
-  /* Custom selection colors */
   ::selection {
-    background: rgba(14, 165, 233, 0.3);
-    color: #F8FAFC;
+    background: rgba(14, 165, 233, 0.25); /* Subtle Cyan Selection */
+    color: inherit;
   }
 
-  /* Custom scrollbar — dark theme */
+  /* ─── Custom Minimal Scrollbar ─── */
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
@@ -78,48 +80,88 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    background: #334155;
-    border-radius: 3px;
+    @apply bg-slate-2 rounded-full;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: #475569;
+    @apply bg-slate-3;
   }
 }
 
-/* ─── Component Utilities ─── */
 @layer components {
-  /* Glassmorphism panel — subtle, readability-safe */
+  /* ─── Core UI Elements ─── */
+
+  /* Glassmorphism: Lightweight, readability-safe, subtle borders */
   .glass-panel {
-    background: rgba(17, 24, 39, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(51, 65, 85, 0.5);
+    @apply bg-bg-secondary/70 backdrop-blur-md border border-slate-1/40 shadow-sm;
   }
 
-  /* Elevated card surface */
+  /* Cards & Modals: Elevated, soft borders, rounded-xl */
   .surface-elevated {
-    @apply bg-bg-elevated border border-slate-1/50 rounded-xl;
+    @apply bg-bg-elevated border border-slate-1/50 rounded-xl shadow-lg shadow-black/5;
   }
 
-  /* Subtle ambient glow ring for hover effects */
-  .glow-ring-cyan {
-    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.2),
-                0 0 20px rgba(14, 165, 233, 0.08);
+  /* ─── Inputs & Forms ─── */
+  
+  /* Native-feeling inputs with strong focus states */
+  .input-base {
+    @apply bg-bg-secondary border border-slate-1 rounded-lg px-4 py-2 text-text-primary placeholder:text-text-muted transition-all duration-200;
+  }
+  
+  .input-base:focus {
+    @apply border-accent-primary ring-1 ring-accent-primary/20 shadow-[0_0_0_2px_rgba(14,165,233,0.1)];
   }
 
-  .glow-ring-teal {
-    box-shadow: 0 0 0 1px rgba(20, 184, 166, 0.2),
-                0 0 20px rgba(20, 184, 166, 0.08);
+  /* ─── Buttons ─── */
+
+  /* Primary CTAs: Strong contrast, soft shadow, rounded-xl */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-accent-primary text-white font-medium px-5 py-2.5 transition-all duration-200 shadow-md shadow-accent-primary/20 hover:bg-sky-500 hover:shadow-lg hover:shadow-accent-primary/30 active:scale-[0.98];
   }
 
-  /* Input focus state */
-  .input-focus {
-    @apply border-accent-primary/50 ring-1 ring-accent-primary/20;
+  /* Secondary Buttons: Muted, contextual */
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl bg-bg-tertiary text-text-primary border border-slate-1/50 font-medium px-5 py-2.5 transition-all duration-200 hover:bg-slate-1/30 hover:border-slate-1 active:scale-[0.98];
+  }
+
+  /* ─── Ambient Glow Effects ─── */
+
+  /* Soft, low-opacity ambient glows for landing pages/hovers */
+  .glow-ambient-cyan {
+    box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.15);
+  }
+
+  .glow-ambient-teal {
+    box-shadow: 0 0 40px -10px rgba(20, 184, 166, 0.15);
+  }
+
+  /* Hover micro-interactions for workspace elements */
+  .hover-glow:hover {
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.3), 
+                0 4px 20px rgba(14, 165, 233, 0.1);
   }
 }
 
-/* ─── Reduced Motion ─── */
+@layer utilities {
+  /* ─── Typography Utils ─── */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* ─── Landing Page Backgrounds ─── */
+  /* Reactive dot grid for hero sections (Subtle) */
+  .bg-dot-grid {
+    background-image: radial-gradient(var(--color-slate-1) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-color: var(--color-bg-primary);
+  }
+  
+  .dark .bg-dot-grid {
+    background-image: radial-gradient(var(--color-slate-1) 1.5px, transparent 1.5px);
+  }
+}
+
+/* ─── Accessibility: Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
