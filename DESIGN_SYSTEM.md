@@ -1,6 +1,6 @@
 # SmartDoc Scanner — AI UI Redesign Design System
 
-## Version 1.0 — Production UI Blueprint
+## Version 1.1 — Production UI Blueprint
 
 ---
 
@@ -26,16 +26,15 @@ WITHOUT:
 * excessive futuristic gimmicks
 * noisy gradients
 * over-animation
-* crypto-style dashboards
 * gaming aesthetics
 
 The final experience should resemble a blend of:
 
-* Linear
 * Raycast
 * Perplexity
 * Granola
-* Stripe Dashboard
+* Crypto Dashboard (for analytics feature, ignore for now)
+* modern productivity PWAs
 
 ---
 
@@ -51,6 +50,8 @@ The interface should:
 * feel modern but highly readable
 * feel premium but lightweight
 * feel intelligent but not overwhelming
+* prioritize focused workflows
+* feel native across desktop and mobile
 
 ---
 
@@ -67,22 +68,23 @@ The application should visually communicate:
 * structured workflows
 * intelligent automation
 * calm focus
+* finance-grade trust
 
 ---
 
 # 4. Design Direction
 
-| Category      | Final Direction                             |
-| ------------- | ------------------------------------------- |
-| Product Feel  | Minimal Productivity + Ambient AI           |
-| Layout        | Triple Pane Workspace                       |
-| Motion        | Ambient on landing, minimal in app          |
-| Theme         | Adaptive Dark/Light                         |
-| Glassmorphism | Light/Subtle only                           |
-| Mobile UX     | Native-inspired PWA                         |
-| AI UX         | Optional Copilot Architecture               |
-| Backgrounds   | Ambient textures + selective reactive grids |
-| Branding      | Technical + trustworthy                     |
+| Category      | Final Direction                                 |
+| ------------- | ----------------------------------------------- |
+| Product Feel  | Minimal Productivity + Ambient AI               |
+| Layout        | Adaptive Navbar + Focused Workspace             |
+| Motion        | Ambient on landing, minimal in app              |
+| Theme         | Adaptive Dark/Light                             |
+| Glassmorphism | Light/Subtle only                               |
+| Mobile UX     | Native-inspired PWA                             |
+| AI UX         | Optional Copilot Architecture                   |
+| Backgrounds   | Ambient textures + selective reactive dot grids |
+| Branding      | Technical + trustworthy                         |
 
 ---
 
@@ -104,6 +106,7 @@ Focus on:
 * slate surfaces
 * soft cyan highlights
 * subtle teal success accents
+* modern productivity aesthetics
 
 ---
 
@@ -220,15 +223,86 @@ NOT inside workspace UI.
 
 # 9. Layout System
 
+# Primary Layout Architecture
+
+## Adaptive Navbar + Focused Workspace
+
+The application should prioritize:
+
+* focused workflows
+* responsive layouts
+* mobile-first usability
+* reduced visual clutter
+
+Avoid:
+
+* permanently visible multi-pane dashboards
+* IDE-style complexity
+* enterprise-heavy layouts
+
+---
+
 # Desktop Layout
 
-## Triple Pane Workspace
+## Floating Top Navbar
 
-| Panel           | Purpose                  |
-| --------------- | ------------------------ |
-| Left Sidebar    | Navigation               |
-| Middle Panel    | Document Explorer        |
-| Right Workspace | Document + OCR + Actions |
+Navbar should contain:
+
+* logo
+* global search
+* scan CTA
+* integrations shortcut
+* quick actions
+* notifications
+* theme toggle
+* profile menu
+
+Navbar should:
+
+* remain lightweight
+* use subtle glassmorphism
+* feel floating and modern
+* maintain readability
+
+---
+
+## Optional Contextual Sidebar
+
+Sidebar should be:
+
+* collapsible
+* contextual
+* secondary to the main workspace
+
+Used ONLY for:
+
+* filters
+* categories
+* folders
+* tags
+* settings
+
+Avoid permanently occupying screen space.
+
+---
+
+## Main Workspace Area
+
+The main workspace should focus on:
+
+* one primary workflow at a time
+* document viewing
+* OCR editing
+* search
+* scanning
+* organization
+
+The UI should feel:
+
+* centered
+* calm
+* focused
+* productivity-oriented
 
 ---
 
@@ -244,9 +318,13 @@ NOT inside workspace UI.
 * Insights
 * Profile
 
+---
+
 ### Floating Scan Button
 
 Persistent FAB for document capture.
+
+The scan action should always feel immediately accessible.
 
 ---
 
@@ -264,6 +342,7 @@ Includes:
 * glow pulses
 * animated mockups
 * smooth scroll transitions
+* floating UI cards
 
 Motion should feel:
 
@@ -297,6 +376,12 @@ Avoid:
 * exaggerated transforms
 * excessive parallax
 * distracting animations
+
+Workspace motion should support:
+
+* readability
+* focus
+* productivity
 
 ---
 
@@ -337,6 +422,12 @@ Avoid:
 * strong gradients behind content
 * heavy visual clutter
 
+Workspace backgrounds should remain:
+
+* calm
+* productivity-focused
+* readability-safe
+
 ---
 
 # 12. Glassmorphism Rules
@@ -354,6 +445,7 @@ Allowed for:
 * modals
 * command palettes
 * AI assistant widgets
+* dropdowns
 
 Avoid glass effects in:
 
@@ -376,6 +468,12 @@ Style:
 * subtle hover glow
 * strong contrast
 
+Primary CTA buttons should:
+
+* feel prominent
+* remain clean
+* avoid excessive glow
+
 ---
 
 # Cards
@@ -386,6 +484,12 @@ Cards should:
 * use soft borders
 * maintain spacing consistency
 * use muted elevated backgrounds
+
+Cards should support:
+
+* mobile responsiveness
+* touch interactions
+* content readability
 
 ---
 
@@ -461,7 +565,14 @@ Demonstrate:
 
 ## Integrations Carousel
 
-Raycast-style integrations carousel.
+Use a Raycast-inspired integrations carousel.
+
+Should feel:
+
+* smooth
+* modern
+* lightweight
+* touch-friendly
 
 ---
 
@@ -474,6 +585,7 @@ Raycast-style integrations carousel.
 * organization
 * searchability
 * structured workflows
+* focused interactions
 
 ---
 
@@ -489,6 +601,12 @@ Includes:
 * sorting
 * categories
 
+Document browsing should:
+
+* remain clean
+* avoid clutter
+* support mobile layouts
+
 ---
 
 ## OCR View
@@ -500,9 +618,15 @@ Should:
 * allow editing
 * show confidence indicators
 
+OCR screens should feel:
+
+* distraction-free
+* highly readable
+* utility-focused
+
 ---
 
-## Actions Panel
+## Actions Area
 
 Contains:
 
@@ -511,6 +635,12 @@ Contains:
 * rename
 * sync
 * AI suggestions (optional)
+
+Actions should remain:
+
+* contextual
+* lightweight
+* easy to access
 
 ---
 
@@ -527,13 +657,15 @@ The app MUST:
 
 ---
 
-# Breakpoints
+# Responsive Behavior
 
-| Device  | Behavior         |
-| ------- | ---------------- |
-| Mobile  | stacked layouts  |
-| Tablet  | hybrid panels    |
-| Desktop | full triple-pane |
+| Device  | Behavior                                 |
+| ------- | ---------------------------------------- |
+| Mobile  | stacked focused views                    |
+| Tablet  | adaptive layouts                         |
+| Desktop | centered workspace with optional sidebar |
+
+Avoid desktop-only layouts.
 
 ---
 
@@ -568,7 +700,7 @@ The UI MUST:
 
 ---
 
-# 19. Recommended Frontend Architecture
+# 19. Mandatory Frontend Architecture
 
 # Stack
 
@@ -631,9 +763,11 @@ When redesigning or generating UI for SmartDoc Scanner:
 
 ### Layout
 
-* Prefer triple-pane workspace layouts
-* Maintain clear visual hierarchy
-* Prioritize productivity workflows
+* Prefer floating navbar layouts
+* Use centered focused workspaces
+* Use optional contextual sidebars
+* Avoid triple-pane enterprise dashboards
+* Maintain strong visual hierarchy
 
 ---
 
