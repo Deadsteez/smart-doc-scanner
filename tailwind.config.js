@@ -60,12 +60,12 @@ export default {
         '3xl': '1.5rem',
       },
       boxShadow: {
-        /* ─── Refined to match DESIGN.md (softer, lower opacity) ─── */
-        'glow-cyan':  '0 0 40px -10px rgba(14, 165, 233, 0.15)',
-        'glow-teal':  '0 0 40px -10px rgba(20, 184, 166, 0.15)',
-        'elevated':   '0 4px 20px -2px rgba(0, 0, 0, 0.15)',
-        'card':       '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
-        'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+        /* ─── Adaptive shadows using CSS variables for light/dark ─── */
+        'glow-cyan':  '0 0 40px -10px rgba(14, 165, 233, var(--shadow-glow-opacity, 0.2))',
+        'glow-teal':  '0 0 40px -10px rgba(20, 184, 166, var(--shadow-glow-opacity, 0.2))',
+        'elevated':   'var(--shadow-elevated, 0 4px 20px -2px rgba(0,0,0,0.15))',
+        'card':       'var(--shadow-card-base, 0 1px 3px rgba(0,0,0,0.1))',
+        'card-hover': 'var(--shadow-card-hover, 0 10px 25px -5px rgba(0,0,0,0.1))',
       },
       animation: {
         /* ─── Timings tweaked for "Minimal Professional Motion" ─── */

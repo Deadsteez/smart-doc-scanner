@@ -71,42 +71,42 @@ function categoryClass(category) {
   <div class="p-6 max-w-6xl mx-auto font-sans animate-fade-in">
 
     <!-- Header: Title + Export Buttons -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+<div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
       <h1 class="text-2xl font-semibold text-text-primary">Scanned Documents</h1>
-      <div class="flex gap-2">
+      <div class="flex gap-3">
         <button
-          class="bg-success/15 text-success hover:bg-success/25 px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-2"
+          class="bg-success  text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 shadow-[0_4px_14px_0_rgba(16,185,129,0.2)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.4)] active:scale-[0.98]"
           @click="exportDocumentsToCSV(documents)"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           Export CSV
         </button>
+        
         <button
-          class="bg-error/15 text-error hover:bg-error/25 px-4 py-2 rounded-xl text-sm transition-all flex items-center gap-2"
+          class="bg-error  text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-all flex items-center gap-2 shadow-[0_4px_14px_0_rgba(239,68,68,0.2)] hover:shadow-[0_6px_20px_rgba(239,68,68,0.4)]  active:scale-[0.98]"
           @click="exportMultipleDocumentsToPDF(documents)"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
           Export PDF
         </button>
       </div>
     </div>
-
     <!-- Search + Filter -->
     <div class="space-y-4 mb-8">
 
       <input v-model="searchQuery" placeholder="Search OCR text…"
-        class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+        class="w-full px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
       />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
         <select
           v-model="selectedCategory"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
         >
           <option value="all">All Categories</option>
           <option value="receipt">Receipt</option>
@@ -119,20 +119,20 @@ function categoryClass(category) {
         <input
           v-model="vendorFilter"
           placeholder="Filter by vendor…"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
 
         <input
           v-model="dateFilter"
           type="date"
           placeholder="Filter by date"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
 
         <input
           v-model="amountFilter"
           placeholder="Filter by amount…"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
       </div>
 
@@ -162,10 +162,10 @@ function categoryClass(category) {
     <!-- Document Grid -->
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <NuxtLink v-for="doc in documents" :key="doc.id" :to="`/doc/${doc.id}`"
-        class="relative bg-bg-secondary rounded-xl  hover:border-slate-1/70 hover:shadow-card-hover transition-all p-4 block">
+        class="relative bg-bg-secondary border border-slate-1 rounded-xl shadow-elevated hover:shadow-[0_10px_30px_-5px_rgba(2,132,199,0.15),0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 p-4 block">
 
         <!-- Delete Button -->
-        <button class="absolute top-3 right-3 text-error/70 hover:text-error transition-all"
+        <button class="absolute top-3 z-50 right-3 text-error/70 hover:text-error transition-all"
           title="Delete document"
           @click="deleteDoc(doc.id, $event)"
         >
@@ -181,7 +181,7 @@ function categoryClass(category) {
         <!-- Document Image Preview -->
         <div
           v-if="doc.image"
-          class="mb-3 h-32 bg-bg-tertiary rounded-lg overflow-hidden flex items-center justify-center"
+          class="mb-3 h-32 bg-bg-tertiary rounded-xl z-1 overflow-hidden flex items-center justify-center"
         >
           <img :src="doc.image" class="object-cover h-full w-full opacity-90" />
         </div>

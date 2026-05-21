@@ -31,7 +31,7 @@ const handleRegister = async () => {
 
 <template>
   <div class="min-h-screen bg-bg-primary flex items-center justify-center px-4">
-    <div class="w-full max-w-md bg-bg-secondary  rounded-2xl p-8 shadow-elevated">
+    <div class="w-full max-w-md bg-bg-secondary border border-slate-1/50 rounded-2xl p-8 shadow-elevated hover-card">
 
       <!-- Logo -->
       <div class="flex flex-col items-center mb-8">
@@ -54,7 +54,7 @@ const handleRegister = async () => {
           v-model="email"
           type="email"
           placeholder="you@example.com"
-          class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all"
+          class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1 text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-all"
         />
       </div>
 
@@ -65,7 +65,7 @@ const handleRegister = async () => {
           v-model="password"
           type="password"
           placeholder="••••••••"
-          class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 transition-all"
+          class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1 text-text-primary placeholder-text-muted focus:outline-none focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 transition-all"
           @keyup.enter="handleRegister"
         />
       </div>
@@ -74,7 +74,7 @@ const handleRegister = async () => {
       <button
         @click="handleRegister"
         :disabled="loading"
-        class="w-full bg-accent-secondary hover:bg-accent-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2"
+        class="w-full bg-accent-secondary hover:bg-accent-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 hover:-translate-y-0.5 shadow-glow-teal"
       >
         <div v-if="loading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
         {{ loading ? 'Creating account…' : 'Register' }}

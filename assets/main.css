@@ -12,30 +12,36 @@
     --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
 
     /* ─── Light Mode (Productivity Default) ─── */
-    --color-bg-primary: #F8FAFC;
+    --color-bg-primary: #F1F5F9;
     --color-bg-secondary: #FFFFFF;
-    --color-bg-tertiary: #F1F5F9;
+    --color-bg-tertiary: #E8EDF4;
     --color-bg-elevated: #FFFFFF;
     
-    --color-slate-1: #ffffff;
+    --color-slate-1: #CBD5E1;
     --color-slate-2: #94A3B8;
     --color-slate-3: #64748B;
     
     --color-text-primary: #0F172A;
-    --color-text-secondary: #334155;
-    --color-text-muted: #64748B;
+    --color-text-secondary: #1E293B;
+    --color-text-muted: #475569;
 
-    --color-accent-primary: #0EA5E9; /* Cyan */
-    --color-accent-secondary: #14B8A6; /* Teal */
-    --color-success: #10B981;
-    --color-warning: #F59E0B;
-    --color-error: #EF4444;
+    --color-accent-primary: #0284C7;   /* Deeper Cyan for light mode contrast */
+    --color-accent-secondary: #0D9488; /* Deeper Teal for light mode contrast */
+    --color-success: #059669;
+    --color-warning: #D97706;
+    --color-error: #DC2626;
+
+    /* ─── Light Mode Shadow Strengths ─── */
+    --shadow-glow-opacity: 0.25;
+    --shadow-card-base: 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-card-hover: 0 10px 30px -5px rgba(2,132,199,0.3), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 24px -4px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
   }
 
   .dark {
     /* ─── Dark Mode (Deep Blue + Slate System) ─── */
     --color-bg-primary: #000000;
-    --color-bg-secondary: #111827;
+    --color-bg-secondary: #0e1a2e;
     --color-bg-tertiary: #1E293B;
     --color-bg-elevated: #243041;
     
@@ -46,6 +52,18 @@
     --color-text-primary: #F8FAFC;
     --color-text-secondary: #CBD5E1;
     --color-text-muted: #94A3B8;
+
+    --color-accent-primary: #0EA5E9;
+    --color-accent-secondary: #14B8A6;
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+
+    /* ─── Dark Mode Shadow Strengths ─── */
+    --shadow-glow-opacity: 0.15;
+    --shadow-card-base: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-card-hover: 0 10px 30px -5px rgba(14,165,233,0.2), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 24px -4px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
   }
 
   html {
@@ -91,18 +109,31 @@
 @layer components {
   /* ─── Core UI Elements ─── */
 
-  /* Glassmorphism: Lightweight, readability-safe, subtle borders */
+  /* Glassmorphism: Adaptive for light and dark */
   .glass-panel {
-    background-color: color-mix(in srgb, var(--color-bg-secondary) 70%, transparent);
-    border: 1px solid color-mix(in srgb, var(--color-slate-1) 40%, transparent);
-    @apply backdrop-blur-md shadow-sm;
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    box-shadow: var(--shadow-card-base);
+    @apply backdrop-blur-md;
   }
 
   /* Cards & Modals: Elevated, soft borders, rounded-xl */
   .surface-elevated {
     background-color: var(--color-bg-elevated);
     border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
-    @apply rounded-xl shadow-lg shadow-black/5;
+    box-shadow: var(--shadow-elevated);
+    @apply rounded-xl;
+  }
+
+  /* ─── Hover Card Utility ─── */
+  /* Reusable hover effect: translate-y lift + accent glow shadow */
+  .hover-card {
+    @apply transition-all duration-300 ease-out;
+    box-shadow: var(--shadow-card-base);
+  }
+  .hover-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    @apply -translate-y-1;
   }
 
   /* ─── Inputs & Forms ─── */
@@ -124,12 +155,12 @@
   /* Primary CTAs: Strong contrast, soft shadow, rounded-xl */
   .btn-primary {
     @apply inline-flex items-center justify-center rounded-xl bg-accent-primary text-white font-medium px-5 py-2.5 transition-all duration-200 hover:bg-sky-500 active:scale-[0.98];
-    /* Using static rgba since accent-primary (#0EA5E9) doesn't change in dark mode */
-    box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.2);
+    box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.25);
   }
   
   .btn-primary:hover {
-    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.3);
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+    @apply -translate-y-0.5;
   }
 
   /* Secondary Buttons: Muted, contextual */
@@ -142,23 +173,24 @@
   .btn-secondary:hover {
     background-color: color-mix(in srgb, var(--color-slate-1) 30%, transparent);
     border-color: var(--color-slate-1);
+    @apply -translate-y-0.5;
   }
 
   /* ─── Ambient Glow Effects ─── */
 
   /* Soft, low-opacity ambient glows for landing pages/hovers */
   .glow-ambient-cyan {
-    box-shadow: 0 0 40px -10px rgba(14, 165, 233, 0.15);
+    box-shadow: 0 0 40px -10px rgba(14, 165, 233, var(--shadow-glow-opacity));
   }
 
   .glow-ambient-teal {
-    box-shadow: 0 0 40px -10px rgba(20, 184, 166, 0.15);
+    box-shadow: 0 0 40px -10px rgba(20, 184, 166, var(--shadow-glow-opacity));
   }
 
   /* Hover micro-interactions for workspace elements */
   .hover-glow:hover {
     box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.3), 
-                0 4px 20px rgba(14, 165, 233, 0.1);
+                0 4px 20px rgba(14, 165, 233, 0.12);
   }
 }
 
