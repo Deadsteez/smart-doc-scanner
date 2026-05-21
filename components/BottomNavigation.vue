@@ -17,7 +17,7 @@ function isActive(to) {
   <!-- Mobile-only bottom nav bar -->
   <nav class="fixed bottom-0 inset-x-0 z-50 md:hidden">
     <!-- Frosted glass background -->
-    <div class="glass-panel border-t border-slate-1/40">
+    <div class="glass-panel border-t border-slate-1/50 shadow-elevated">
       <div class="flex items-center justify-around px-2 py-1.5 safe-area-pb">
         <template v-for="item in navItems" :key="item.label">
           <!-- Floating scan button (elevated CTA) -->

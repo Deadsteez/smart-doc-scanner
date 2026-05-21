@@ -401,7 +401,7 @@ async function toggleCamera() {
         <p class="text-text-muted text-sm">Capture or upload a document to extract and classify data.</p>
   </div>
 
-  <div class="bg-bg-secondary  rounded-xl overflow-hidden">
+  <div class="bg-bg-secondary border border-slate-1/50 rounded-xl overflow-hidden shadow-card">
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
       <p class="text-sm font-medium text-text-secondary">Camera</p>
       <button @click="toggleCamera" class="text-xs px-3 py-1.5 rounded-lg  transition-colors" :class="showCamera
@@ -434,7 +434,7 @@ async function toggleCamera() {
   <div class="p-4 flex gap-3">
     <button
       @click="captureFrame"
-      class="flex-1 bg-accent-primary hover:bg-accent-primary/90 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-glow-cyan"
+      class="flex-1 bg-accent-primary hover:bg-sky-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-cyan hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(14,165,233,0.4)]"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -444,7 +444,7 @@ async function toggleCamera() {
     </button>
     <button
       @click="triggerFileInput"
-      class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 "
+      class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-slate-1/50 shadow-card hover:-translate-y-0.5 hover:shadow-card-hover"
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -461,7 +461,7 @@ async function toggleCamera() {
   </div>
 </div>
   <div v-if="showPdfUploader" class="fixed inset-0 bg-bg-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-bg-secondary  rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-elevated">
+  <div class="bg-bg-secondary border border-slate-1/50 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-elevated">
       <PdfUploader 
             @pages-selected="handlePdfPagesSelected"
             @cancel="handlePdfCancel"
@@ -469,7 +469,7 @@ async function toggleCamera() {
    </div>
   </div>
 
-  <div v-if="pdfPages.length > 1" class="bg-bg-secondary  rounded-xl p-4">
+  <div v-if="pdfPages.length > 1" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
   <div class="flex items-center justify-between mb-3">
   <p class="text-text-secondary text-sm font-medium">PDF Page Navigation</p>
   <span class="text-xs text-text-muted">Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}</span>
@@ -499,7 +499,7 @@ async function toggleCamera() {
   <div v-if="isSaving" class="p-4 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-sm text-accent-primary flex items-center gap-3">
     <div class="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>{{ nlpStatus ?? 'Saving document and syncing to cloud…' }}</div>
 
-    <div v-if="capturedImage" class="bg-bg-secondary  rounded-xl p-4">
+    <div v-if="capturedImage" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
     <div class="flex justify-between items-center mb-3">
     <p class="text-text-secondary text-sm font-medium">Original</p>
 
@@ -508,15 +508,15 @@ async function toggleCamera() {
      <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
 </div>
 
-<div v-if="processedImage" class="bg-bg-secondary  rounded-xl p-4">
+<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
   <LanguageSelector v-model="selectedLanguage" />
 </div>
 
-<div v-if="processedImage" class="bg-bg-secondary  rounded-xl p-4">
+<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
 <p class="text-text-secondary text-sm font-medium mb-3">Preprocessed</p>
 <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
 
-<button class="w-full bg-accent-secondary hover:bg-accent-secondary/90 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 shadow-glow-teal" @click="runOCR">
+<button class="w-full bg-accent-secondary hover:bg-teal-500 active:scale-95 text-white font-semibold px-4 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-teal hover:-translate-y-0.5 hover:shadow-[0_0_25px_rgba(20,184,166,0.4)]" @click="runOCR">
   
 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -525,7 +525,7 @@ async function toggleCamera() {
 </button>
 </div>
 
-<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-bg-secondary  rounded-xl p-4">
+<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
   <div class="flex items-center gap-3 mb-3">
     <div class="w-4 h-4 border-[3px] border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
           <span class="text-sm text-text-secondary">Extracting text from document…</span>
@@ -536,7 +536,7 @@ async function toggleCamera() {
         <p class="text-xs text-text-muted mt-2 text-right">{{ ocrProgress }}%</p>
     </div>
 
-      <div v-if="ocrText" class="bg-bg-secondary  rounded-xl p-4">
+      <div v-if="ocrText" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-4 shadow-card">
       <div class="flex items-center justify-between mb-3">
       <p class="font-semibold text-text-primary">OCR Output</p>
       <div class="flex items-center gap-2">
@@ -561,7 +561,7 @@ async function toggleCamera() {
   </svg>
 
   <div> <p class="font-medium">Document saved!</p> <p class="text-xs opacity-75 mt-0.5">Saved locally and syncing to cloud in background.</p> </div>
-  <NuxtLink to="/" class="ml-auto text-success hover:underline font-semibold text-sm whitespace-nowrap">
+  <NuxtLink to="/dashboard" class="ml-auto text-success hover:underline font-semibold text-sm whitespace-nowrap">
   View Dashboard →
   </NuxtLink>
   </div>

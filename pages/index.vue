@@ -49,7 +49,7 @@ onMounted(() => {
     
     // Check theme
     const isDark = document.documentElement.classList.contains('dark')
-    ctx.fillStyle = isDark ? 'rgba(14, 165, 233, 0.3)' : 'rgba(14, 165, 233, 0.5)'
+    ctx.fillStyle = isDark ? 'rgba(14, 165, 233, 0.3)' : 'rgba(2, 132, 199, 0.6)'
     
     for (let i = 0; i < dots.length; i++) {
       const dot = dots[i]
@@ -75,7 +75,8 @@ onMounted(() => {
       dot.y += dot.vy
       
       ctx.beginPath()
-      ctx.arc(dot.x, dot.y, 1.5, 0, Math.PI * 2)
+      const dotRadius = isDark ? 1.5 : 2
+      ctx.arc(dot.x, dot.y, dotRadius, 0, Math.PI * 2)
       ctx.fill()
     }
     
@@ -252,7 +253,7 @@ onMounted(() => {
       </div>
     </section>
 
-    <footer class="bg-bg-secondary py-14">
+    <footer class="bg-bg-secondary border-t border-slate-1/50 py-14">
       <div class="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
         <div class="flex items-center gap-3 group cursor-default">
           <div class="w-10 h-10 rounded-xl glass-panel flex items-center justify-center shadow-[0_0_15px_rgba(14,165,233,0.3)] group-hover:scale-110 group-hover:shadow-[0_0_25px_rgba(14,165,233,0.6)] transition-all">

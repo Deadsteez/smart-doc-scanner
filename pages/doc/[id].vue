@@ -34,7 +34,7 @@ const categoryClass = computed(() => ({
   <div class="p-6 max-w-4xl mx-auto">
 
     <NuxtLink
-      to="/"
+      to="/dashboard"
       class="text-accent-primary hover:text-accent-primary/80 transition-colors mb-6 inline-flex items-center gap-1.5 text-sm font-medium"
     >
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -56,7 +56,7 @@ const categoryClass = computed(() => ({
         <div class="flex items-center gap-3">
           <button
             @click="exportDocumentToPDF(doc)"
-            class="bg-error/15 text-error hover:bg-error/25 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5"
+            class="bg-error/15 text-error hover:bg-error/25 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card"
             title="Export as PDF"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -82,13 +82,13 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- Scanned Image -->
-      <div class="bg-bg-secondary  rounded-xl p-5">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
         <h2 class="text-text-primary font-semibold mb-3">Scanned Image</h2>
         <img :src="doc.image" class="rounded-lg max-w-full shadow-elevated" alt="Scanned document" />
       </div>
 
       <!-- Extracted Fields -->
-      <div class="bg-bg-secondary  rounded-xl p-5">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
         <h2 class="text-text-primary font-semibold mb-3">Extracted Fields</h2>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -119,7 +119,7 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- Line Items -->
-      <div v-if="extracted.items && extracted.items.length > 0" class="bg-bg-secondary  rounded-xl p-5">
+      <div v-if="extracted.items && extracted.items.length > 0" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
         <h2 class="text-text-primary font-semibold mb-3">Line Items</h2>
         <div class="space-y-2">
           <div
@@ -134,7 +134,7 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- OCR Text -->
-      <div class="bg-bg-secondary  rounded-xl p-5">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
         <h2 class="text-text-primary font-semibold mb-3">OCR Text</h2>
         <pre class="bg-bg-primary  p-4 rounded-lg text-sm whitespace-pre-wrap text-text-secondary font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText }}</pre>
       </div>

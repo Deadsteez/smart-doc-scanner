@@ -51,13 +51,13 @@ function closeMenuOnOutside() {
 
 <template>
   <!-- Floating top navbar — desktop-first, hidden on mobile (bottom nav handles it) -->
-  <nav class="sticky top-0 z-50 hidden md:block">
+  <nav class="sticky top-2 z-50 hidden md:block mx-auto">
     <div class="mx-4 mt-3">
       <div
         :class="[
-  'glass-panel rounded-full px-5 py-2.5 flex items-center justify-between max-w-[1440px] mx-auto transition-all duration-300 border',
+  'glass-panel rounded-full px-5 py-2.5 flex items-center justify-between max-w-[1440px] mx-auto transition-all duration-300 border shadow-card',
   isScrolled
-    ? 'bg-bg-primary/90 border-slate-1/20 shadow-elevated backdrop-blur-md'
+    ? 'bg-bg-primary/90 border-slate-1/20 shadow-elevated backdrop-blur-md '
     : 'bg-bg-primary/70 border-transparent'
 ]" 
       >
@@ -102,8 +102,8 @@ function closeMenuOnOutside() {
         <div class="flex items-center gap-3">
           <!-- Scan CTA button -->
           <NuxtLink
-            
-            class="flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-glow-cyan"
+            to="/scan"
+            class="flex items-center gap-2 px-4 py-2 bg-accent-secondary hover:bg-teal-500 text-white text-sm font-semibold rounded-full transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-glow-teal hover:shadow-[0_0_25px_rgba(20,184,166,0.4)]"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
@@ -154,10 +154,10 @@ function closeMenuOnOutside() {
       <div
         v-if="showProfileMenu"
         ref="profileMenuRef"
-        class="absolute right-0 top-[calc(100%+0.5rem)] w-60 rounded-2xl overflow-hidden border border-slate-1/30 shadow-elevated bg-bg-elevated"
+        class="absolute right-0 top-[calc(100%+0.9rem)] w-60 rounded-2xl overflow-hidden shadow-elevated bg-bg-elevated border border-slate-1/50"
       >
         <!-- User Info -->
-        <div class="px-4 py-3 border-b border-slate-1/30">
+        <div class="px-4 py-3 ">
           <p class="text-sm text-text-primary font-medium truncate">
             {{ user.email }}
           </p>
