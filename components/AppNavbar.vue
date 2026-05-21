@@ -102,7 +102,7 @@ function closeMenuOnOutside() {
         <div class="flex items-center gap-3">
           <!-- Scan CTA button -->
           <NuxtLink
-            
+            to="/scan"
             class="flex items-center gap-2 px-4 py-2 bg-accent-primary hover:bg-accent-primary/90 text-white text-sm font-semibold rounded-xl transition-all duration-200 hover:-translate-y-0.5 active:scale-95 shadow-glow-cyan"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
