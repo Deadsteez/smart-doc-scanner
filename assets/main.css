@@ -1,3 +1,233 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ─── Google Fonts ─── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    /* ─── Typography ─── */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-display: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
+
+    /* ─── Light Mode (Productivity Default) ─── */
+    --color-bg-primary: #F1F5F9;
+    --color-bg-secondary: #FFFFFF;
+    --color-bg-tertiary: #E8EDF4;
+    --color-bg-elevated: #FFFFFF;
+    
+    --color-slate-1: #CBD5E1;
+    --color-slate-2: #94A3B8;
+    --color-slate-3: #64748B;
+    
+    --color-text-primary: #0F172A;
+    --color-text-secondary: #1E293B;
+    --color-text-muted: #475569;
+
+    --color-accent-primary: #0284C7;   /* Deeper Cyan for light mode contrast */
+    --color-accent-secondary: #0D9488; /* Deeper Teal for light mode contrast */
+    --color-success: #059669;
+    --color-warning: #D97706;
+    --color-error: #DC2626;
+
+    /* ─── Light Mode Shadow Strengths ─── */
+    --shadow-glow-opacity: 0.25;
+    --shadow-card-base: 0 1px 3px rgba(0,0,0,0.8), 0 1px 2px rgba(0,0,0,0.4);
+    --shadow-card-hover: 0 10px 30px -5px rgba(2,132,199,0.3), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 24px -4px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .dark {
+    /* ─── Dark Mode (Deep Blue + Slate System) ─── */
+    --color-bg-primary: #000000;
+    --color-bg-secondary: #0e1a2e;
+    --color-bg-tertiary: #1E293B;
+    --color-bg-elevated: #243041;
+    
+    --color-slate-1: #223b5f;
+    --color-slate-2: #475569;
+    --color-slate-3: #ffffff;
+    
+    --color-text-primary: #F8FAFC;
+    --color-text-secondary: #CBD5E1;
+    --color-text-muted: #94A3B8;
+
+    --color-accent-primary: #0EA5E9;
+    --color-accent-secondary: #14B8A6;
+    --color-success: #10B981;
+    --color-warning: #F59E0B;
+    --color-error: #EF4444;
+
+    /* ─── Dark Mode Shadow Strengths ─── */
+    --shadow-glow-opacity: 0.15;
+    --shadow-card-base: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-card-hover: 0 10px 30px -5px rgba(14,165,233,0.2), 0 4px 12px rgba(0,0,0,0.3);
+    --shadow-elevated: 0 4px 24px -4px rgba(0,0,0,0.3), 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg-primary text-text-primary transition-colors duration-300;
+  }
+
+  /* ─── Accessibility & Interaction ─── */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-accent-primary ring-offset-2 ring-offset-bg-primary;
+  }
+
+  ::selection {
+    background: rgba(14, 165, 233, 0.25); /* Subtle Cyan Selection */
+    color: inherit;
+  }
+
+  /* ─── Custom Minimal Scrollbar ─── */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-2 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-3;
+  }
+}
+
+@layer components {
+  /* ─── Core UI Elements ─── */
+
+  /* Glassmorphism: Adaptive for light and dark */
+  .glass-panel {
+    background-color: color-mix(in srgb, var(--color-bg-secondary) 75%, transparent);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    box-shadow: var(--shadow-card-base);
+    @apply backdrop-blur-md;
+  }
+
+  /* Cards & Modals: Elevated, soft borders, rounded-xl */
+  .surface-elevated {
+    background-color: var(--color-bg-elevated);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    box-shadow: var(--shadow-elevated);
+    @apply rounded-xl;
+  }
+
+  /* ─── Hover Card Utility ─── */
+  /* Reusable hover effect: translate-y lift + accent glow shadow */
+  .hover-card {
+    @apply transition-all duration-300 ease-out;
+    box-shadow: var(--shadow-card-base);
+  }
+  .hover-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    @apply -translate-y-1;
+  }
+
+  /* ─── Inputs & Forms ─── */
+  
+  /* Native-feeling inputs with strong focus states */
+  .input-base {
+    @apply bg-bg-secondary border border-slate-1 rounded-lg px-4 py-2 text-text-primary placeholder:text-text-muted transition-all duration-200;
+  }
+  
+  .input-base:focus {
+    border-color: var(--color-accent-primary);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-accent-primary) 50%, transparent), 
+                0 0 0 3px color-mix(in srgb, var(--color-accent-primary) 15%, transparent);
+    @apply outline-none;
+  }
+
+  /* ─── Buttons ─── */
+
+  /* Primary CTAs: Strong contrast, soft shadow, rounded-xl */
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-accent-primary text-white font-medium px-5 py-2.5 transition-all duration-200 hover:bg-sky-500 active:scale-[0.98];
+    box-shadow: 0 4px 14px 0 rgba(14, 165, 233, 0.25);
+  }
+  
+  .btn-primary:hover {
+    box-shadow: 0 6px 20px rgba(14, 165, 233, 0.35);
+    @apply -translate-y-0.5;
+  }
+
+  /* Secondary Buttons: Muted, contextual */
+  .btn-secondary {
+    background-color: var(--color-bg-tertiary);
+    border: 1px solid color-mix(in srgb, var(--color-slate-1) 50%, transparent);
+    @apply inline-flex items-center justify-center rounded-xl text-text-primary font-medium px-5 py-2.5 transition-all duration-200 active:scale-[0.98];
+  }
+  
+  .btn-secondary:hover {
+    background-color: color-mix(in srgb, var(--color-slate-1) 30%, transparent);
+    border-color: var(--color-slate-1);
+    @apply -translate-y-0.5;
+  }
+
+  /* ─── Ambient Glow Effects ─── */
+
+  /* Soft, low-opacity ambient glows for landing pages/hovers */
+  .glow-ambient-cyan {
+    box-shadow: 0 0 40px -10px rgba(14, 165, 233, var(--shadow-glow-opacity));
+  }
+
+  .glow-ambient-teal {
+    box-shadow: 0 0 40px -10px rgba(20, 184, 166, var(--shadow-glow-opacity));
+  }
+
+  /* Hover micro-interactions for workspace elements */
+  .hover-glow:hover {
+    box-shadow: 0 0 0 1px rgba(14, 165, 233, 0.3), 
+                0 4px 20px rgba(14, 165, 233, 0.12);
+  }
+}
+
+@layer utilities {
+  /* ─── Typography Utils ─── */
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  /* ─── Landing Page Backgrounds ─── */
+  /* Reactive dot grid for hero sections (Brighter & thicker) */
+.bg-dot-grid {
+  background-image: radial-gradient(
+    rgba(148, 163, 184, 0.35) 2px,
+    transparent 2px
+  );
+
+  background-size: 24px 24px;
+  background-color: var(--color-bg-primary);
+}
+
+.dark .bg-dot-grid {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.809) 2.2px,
+    transparent 2.2px
+  );
+}
+}
+
+/* ─── Accessibility: Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
