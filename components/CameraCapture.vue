@@ -401,10 +401,10 @@ async function toggleCamera() {
         <p class="text-text-muted text-sm">Capture or upload a document to extract and classify data.</p>
   </div>
 
-  <div class="bg-bg-secondary border border-slate-1/40 rounded-xl overflow-hidden">
+  <div class="bg-bg-secondary  rounded-xl overflow-hidden">
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
       <p class="text-sm font-medium text-text-secondary">Camera</p>
-      <button @click="toggleCamera" class="text-xs px-3 py-1.5 rounded-lg border transition-colors" :class="showCamera
+      <button @click="toggleCamera" class="text-xs px-3 py-1.5 rounded-lg  transition-colors" :class="showCamera
           ? 'border-error/40 text-error hover:border-error/70': 'border-success/40 text-success hover:border-success/70'" >{{ showCamera ? '⏹ Turn Off Camera' : '▶ Turn On Camera' }}
       </button>
   </div>
@@ -444,7 +444,7 @@ async function toggleCamera() {
     </button>
     <button
       @click="triggerFileInput"
-      class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 border border-slate-1/40"
+      class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-150 flex items-center justify-center gap-2 "
     >
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
@@ -461,7 +461,7 @@ async function toggleCamera() {
   </div>
 </div>
   <div v-if="showPdfUploader" class="fixed inset-0 bg-bg-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-  <div class="bg-bg-secondary border border-slate-1/40 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-elevated">
+  <div class="bg-bg-secondary  rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-elevated">
       <PdfUploader 
             @pages-selected="handlePdfPagesSelected"
             @cancel="handlePdfCancel"
@@ -469,7 +469,7 @@ async function toggleCamera() {
    </div>
   </div>
 
-  <div v-if="pdfPages.length > 1" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+  <div v-if="pdfPages.length > 1" class="bg-bg-secondary  rounded-xl p-4">
   <div class="flex items-center justify-between mb-3">
   <p class="text-text-secondary text-sm font-medium">PDF Page Navigation</p>
   <span class="text-xs text-text-muted">Page {{ currentPdfPageIndex + 1 }} of {{ pdfPages.length }}</span>
@@ -499,7 +499,7 @@ async function toggleCamera() {
   <div v-if="isSaving" class="p-4 bg-accent-primary/10 border border-accent-primary/30 rounded-xl text-sm text-accent-primary flex items-center gap-3">
     <div class="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>{{ nlpStatus ?? 'Saving document and syncing to cloud…' }}</div>
 
-    <div v-if="capturedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+    <div v-if="capturedImage" class="bg-bg-secondary  rounded-xl p-4">
     <div class="flex justify-between items-center mb-3">
     <p class="text-text-secondary text-sm font-medium">Original</p>
 
@@ -508,11 +508,11 @@ async function toggleCamera() {
      <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
 </div>
 
-<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+<div v-if="processedImage" class="bg-bg-secondary  rounded-xl p-4">
   <LanguageSelector v-model="selectedLanguage" />
 </div>
 
-<div v-if="processedImage" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+<div v-if="processedImage" class="bg-bg-secondary  rounded-xl p-4">
 <p class="text-text-secondary text-sm font-medium mb-3">Preprocessed</p>
 <img :src="processedImage" class="rounded-lg shadow max-h-[300px] mx-auto block mb-4" />
 
@@ -525,7 +525,7 @@ async function toggleCamera() {
 </button>
 </div>
 
-<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+<div v-if="ocrProgress > 0 && ocrProgress < 100 && !ocrText" class="bg-bg-secondary  rounded-xl p-4">
   <div class="flex items-center gap-3 mb-3">
     <div class="w-4 h-4 border-[3px] border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
           <span class="text-sm text-text-secondary">Extracting text from document…</span>
@@ -536,7 +536,7 @@ async function toggleCamera() {
         <p class="text-xs text-text-muted mt-2 text-right">{{ ocrProgress }}%</p>
     </div>
 
-      <div v-if="ocrText" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-4">
+      <div v-if="ocrText" class="bg-bg-secondary  rounded-xl p-4">
       <div class="flex items-center justify-between mb-3">
       <p class="font-semibold text-text-primary">OCR Output</p>
       <div class="flex items-center gap-2">

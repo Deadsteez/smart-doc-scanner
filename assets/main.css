@@ -17,7 +17,7 @@
     --color-bg-tertiary: #F1F5F9;
     --color-bg-elevated: #FFFFFF;
     
-    --color-slate-1: #CBD5E1;
+    --color-slate-1: #ffffff;
     --color-slate-2: #94A3B8;
     --color-slate-3: #64748B;
     
@@ -34,14 +34,14 @@
 
   .dark {
     /* ─── Dark Mode (Deep Blue + Slate System) ─── */
-    --color-bg-primary: #0F172A;
+    --color-bg-primary: #000000;
     --color-bg-secondary: #111827;
     --color-bg-tertiary: #1E293B;
     --color-bg-elevated: #243041;
     
-    --color-slate-1: #334155;
+    --color-slate-1: #223b5f;
     --color-slate-2: #475569;
-    --color-slate-3: #64748B;
+    --color-slate-3: #ffffff;
     
     --color-text-primary: #F8FAFC;
     --color-text-secondary: #CBD5E1;
@@ -169,16 +169,23 @@
   }
 
   /* ─── Landing Page Backgrounds ─── */
-  /* Reactive dot grid for hero sections (Subtle) */
-  .bg-dot-grid {
-    background-image: radial-gradient(var(--color-slate-1) 1px, transparent 1px);
-    background-size: 24px 24px;
-    background-color: var(--color-bg-primary);
-  }
-  
-  .dark .bg-dot-grid {
-    background-image: radial-gradient(var(--color-slate-1) 1.5px, transparent 1.5px);
-  }
+  /* Reactive dot grid for hero sections (Brighter & thicker) */
+.bg-dot-grid {
+  background-image: radial-gradient(
+    rgba(148, 163, 184, 0.35) 2px,
+    transparent 2px
+  );
+
+  background-size: 24px 24px;
+  background-color: var(--color-bg-primary);
+}
+
+.dark .bg-dot-grid {
+  background-image: radial-gradient(
+    rgba(255, 255, 255, 0.809) 2.2px,
+    transparent 2.2px
+  );
+}
 }
 
 /* ─── Accessibility: Reduced Motion ─── */

@@ -82,13 +82,13 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- Scanned Image -->
-      <div class="bg-bg-secondary border border-slate-1/40 rounded-xl p-5">
+      <div class="bg-bg-secondary  rounded-xl p-5">
         <h2 class="text-text-primary font-semibold mb-3">Scanned Image</h2>
         <img :src="doc.image" class="rounded-lg max-w-full shadow-elevated" alt="Scanned document" />
       </div>
 
       <!-- Extracted Fields -->
-      <div class="bg-bg-secondary border border-slate-1/40 rounded-xl p-5">
+      <div class="bg-bg-secondary  rounded-xl p-5">
         <h2 class="text-text-primary font-semibold mb-3">Extracted Fields</h2>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -119,7 +119,7 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- Line Items -->
-      <div v-if="extracted.items && extracted.items.length > 0" class="bg-bg-secondary border border-slate-1/40 rounded-xl p-5">
+      <div v-if="extracted.items && extracted.items.length > 0" class="bg-bg-secondary  rounded-xl p-5">
         <h2 class="text-text-primary font-semibold mb-3">Line Items</h2>
         <div class="space-y-2">
           <div
@@ -134,9 +134,9 @@ const categoryClass = computed(() => ({
       </div>
 
       <!-- OCR Text -->
-      <div class="bg-bg-secondary border border-slate-1/40 rounded-xl p-5">
+      <div class="bg-bg-secondary  rounded-xl p-5">
         <h2 class="text-text-primary font-semibold mb-3">OCR Text</h2>
-        <pre class="bg-bg-primary border border-slate-1/30 p-4 rounded-lg text-sm whitespace-pre-wrap text-text-secondary font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText }}</pre>
+        <pre class="bg-bg-primary  p-4 rounded-lg text-sm whitespace-pre-wrap text-text-secondary font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText }}</pre>
       </div>
     </div>
   </div>

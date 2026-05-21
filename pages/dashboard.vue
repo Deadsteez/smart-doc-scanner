@@ -99,14 +99,14 @@ function categoryClass(category) {
     <div class="space-y-4 mb-8">
 
       <input v-model="searchQuery" placeholder="Search OCR text…"
-        class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1/40 text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+        class="w-full px-4 py-2.5 rounded-xl bg-bg-tertiary text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
       />
 
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
 
         <select
           v-model="selectedCategory"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1/40 text-text-primary focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
         >
           <option value="all">All Categories</option>
           <option value="receipt">Receipt</option>
@@ -119,20 +119,20 @@ function categoryClass(category) {
         <input
           v-model="vendorFilter"
           placeholder="Filter by vendor…"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1/40 text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
 
         <input
           v-model="dateFilter"
           type="date"
           placeholder="Filter by date"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1/40 text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
 
         <input
           v-model="amountFilter"
           placeholder="Filter by amount…"
-          class="px-4 py-2.5 rounded-xl bg-bg-tertiary border border-slate-1/40 text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          class="px-4 py-2.5 rounded-xl bg-bg-tertiary  text-text-primary placeholder-text-muted focus:border-accent-primary/50 focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all"
         />
       </div>
 
@@ -162,7 +162,7 @@ function categoryClass(category) {
     <!-- Document Grid -->
     <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <NuxtLink v-for="doc in documents" :key="doc.id" :to="`/doc/${doc.id}`"
-        class="relative bg-bg-secondary rounded-xl border border-slate-1/40 hover:border-slate-1/70 hover:shadow-card-hover transition-all p-4 block">
+        class="relative bg-bg-secondary rounded-xl  hover:border-slate-1/70 hover:shadow-card-hover transition-all p-4 block">
 
         <!-- Delete Button -->
         <button class="absolute top-3 right-3 text-error/70 hover:text-error transition-all"

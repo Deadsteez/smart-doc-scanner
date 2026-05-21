@@ -55,10 +55,10 @@ function closeMenuOnOutside() {
     <div class="mx-4 mt-3">
       <div
         :class="[
-  'glass-panel rounded-2xl px-5 py-2.5 flex items-center justify-between max-w-[1440px] mx-auto transition-all duration-300 border',
+  'glass-panel rounded-full px-5 py-2.5 flex items-center justify-between max-w-[1440px] mx-auto transition-all duration-300 border',
   isScrolled
-    ? 'bg-bg-primary/90 border-white/10 shadow-elevated backdrop-blur-md'
-    : 'bg-bg-primary/70 border-white/5'
+    ? 'bg-bg-primary/90 border-slate-1/20 shadow-elevated backdrop-blur-md'
+    : 'bg-bg-primary/70 border-transparent'
 ]" 
       >
         <!-- Left: Logo + Nav links -->
@@ -154,7 +154,7 @@ function closeMenuOnOutside() {
       <div
         v-if="showProfileMenu"
         ref="profileMenuRef"
-        class="absolute right-0 top-[calc(100%+0.5rem)] w-60 rounded-2xl overflow-hidden border border-white/10 shadow-elevated bg-bg-secondary/95 backdrop-blur-xl supports-[backdrop-filter]:bg-bg-secondary/80"
+        class="absolute right-0 top-[calc(100%+0.5rem)] w-60 rounded-2xl overflow-hidden border border-slate-1/30 shadow-elevated bg-bg-elevated"
       >
         <!-- User Info -->
         <div class="px-4 py-3 border-b border-slate-1/30">

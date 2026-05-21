@@ -33,7 +33,7 @@ const formatConfidence = (confidence) => {
 </script>
 
 <template>
-  <div class="group bg-bg-secondary border border-slate-1/40 rounded-xl overflow-hidden transition-all duration-200 hover:border-slate-1/70 hover:shadow-card-hover">
+  <div class="group bg-bg-secondary  rounded-xl overflow-hidden transition-all duration-200 hover:border-slate-1/70 hover:shadow-card-hover">
     <!-- Image section -->
     <div class="relative bg-bg-tertiary">
       <img
