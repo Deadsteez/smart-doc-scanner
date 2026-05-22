@@ -71,12 +71,13 @@ const selectedDoc = computed(() =>
 )
 
 function categoryClass(category: any) {
-  return {
+  const map: Record<string, string> = {
     receipt: 'bg-accent-primary/15 text-accent-primary',
     invoice: 'bg-success/15 text-success',
     bill: 'bg-accent-secondary/15 text-accent-secondary',
     other: 'bg-slate-1/30 text-text-muted',
-  }[category?.type] || 'bg-slate-1/30 text-text-muted'
+  }
+  return map[category?.type] ?? 'bg-slate-1/30 text-text-muted'
 }
 </script>
 

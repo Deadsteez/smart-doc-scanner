@@ -67,7 +67,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
       // Auto-select first workspace if none selected
       if (!currentWorkspace.value && workspaces.value.length > 0) {
-        await selectWorkspace(workspaces.value[0].id)
+      
+        await selectWorkspace(workspaces.value[0]!.id)
       }
     } catch (err: any) {
       console.error('[WorkspaceStore] fetchWorkspaces:', err)
@@ -136,7 +137,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     if (err) { error.value = err.message; return }
     currentWorkspace.value.name = name
-    const idx = workspaces.value.findIndex(w => w.id === currentWorkspace.value!.id)
+    const wsId = currentWorkspace.value?.id
+   const idx = workspaces.value.findIndex(w => w.id === wsId)
     if (idx !== -1) workspaces.value[idx].name = name
   }
 
@@ -154,7 +156,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (currentWorkspace.value?.id === workspaceId) {
         currentWorkspace.value = null
         if (workspaces.value.length > 0) {
-          await selectWorkspace(workspaces.value[0].id)
+          await selectWorkspace(workspaces.value[0]!.id)
         }
       }
       return true

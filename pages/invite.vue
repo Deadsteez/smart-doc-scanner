@@ -13,6 +13,10 @@ const state = ref('loading') // 'loading' | 'signing-in' | 'accepting' | 'succes
 const errorMessage = ref('')
 const workspaceId = ref('')
 
+interface AcceptInviteResponse {
+  workspace_id: string
+}
+
 onMounted(async () => {
   const token = route.query.token as string | undefined
 
@@ -38,12 +42,11 @@ onMounted(async () => {
   // ── Accept the invite ────────────────────────────────────────
   state.value = 'accepting'
   try {
-    const data = await $fetch('/api/workspace/accept-invite', {
-      method: 'POST',
-      body: { token, user_id: session.user.id },
-    })
-
-    workspaceId.value = data.workspace_id
+    const data = await $fetch<AcceptInviteResponse>('/api/workspace/accept-invite', {
+     method: 'POST',
+     body: { token, user_id: session.user.id },
+})
+workspaceId.value = data.workspace_id
     state.value = 'success'
 
     // Clean up pending invite from storage
@@ -56,10 +59,10 @@ onMounted(async () => {
 
     // Redirect to workspace after short delay
     setTimeout(() => navigateTo('/workspace'), 1800)
-  } catch (err) {
+  } catch (err: any) {
     state.value = 'error'
     errorMessage.value = err?.data?.statusMessage ?? 'Something went wrong accepting the invite.'
-  }
+}
 })
 </script>
 

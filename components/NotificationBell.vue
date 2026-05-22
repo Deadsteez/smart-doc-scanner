@@ -14,13 +14,13 @@ function toggle() {
   if (isOpen.value) notificationStore.markAllRead()
 }
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   approved: 'text-success',
   rejected: 'text-error',
   pending: 'text-warning',
 }
 
-function formatTime(timestamp) {
+function formatTime(timestamp: number): string {
   const diff = Date.now() - timestamp
   const mins = Math.floor(diff / 60000)
   if (mins < 1) return 'just now'
