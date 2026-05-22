@@ -1,4 +1,3 @@
-//This interface cvFeatures stores metadata about image 
 export interface CvFeatures {
   width: number
   height: number
@@ -8,7 +7,6 @@ export interface CvFeatures {
   isLikelyDocument: boolean
 }
 
-// This async function extracts important features from image frame.
 export async function extractCvFeatures(imageDataUrl: string, timeoutMS: number = 5000): Promise<CvFeatures> {
   if (!imageDataUrl?.startsWith('data:image/')) {
     throw new Error('Invalid image data URL format')
@@ -38,11 +36,9 @@ export async function extractCvFeatures(imageDataUrl: string, timeoutMS: number 
         height,
         aspectRatio,
 
-
         isPortrait: aspectRatio < 1,
         isLandScape: aspectRatio >= 1,
 
-        //aspectRatio tells if image is an document 
         isLikelyDocument: (aspectRatio > 0.6 && aspectRatio < 0.85) || (aspectRatio > 1.18 && aspectRatio < 1.67)
       })
     }

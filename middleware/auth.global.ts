@@ -20,7 +20,6 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (session) {
     supabase.auth.getUser().catch(() => {
-      // Token invalid or revoked — sign out and redirect
       supabase.auth.signOut()
       navigateTo('/login')
     })

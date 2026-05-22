@@ -1,11 +1,3 @@
-// useSemanticEngine.ts
-// ─────────────────────────────────────────────────────────────────────────────
-// Central composable that:
-//  1. Manages the embedding worker lifecycle
-//  2. Embeds documents when saved (async, non-blocking)
-//  3. Embeds search queries on demand
-//  4. Exposes semantic search + query parsing to the UI
-//
 import { ref, shallowRef } from 'vue'
 import { db } from '~/services/db'
 import type { DocumentRecord } from '~/services/db'
@@ -15,7 +7,6 @@ import { parseNlQuery, explainQuery } from '~/composables/useNlpQuery'
 import type { ParsedQuery } from '~/composables/useNlpQuery'
 import { inferExpenseCategory, extractSemanticTags } from '~/services/vendorIntelligence'
 
-// ─── Worker singleton (module-level so it survives route changes) ─────────────
 let worker: Worker | null = null
 let workerReady           = false
 const workerReadyCallbacks: Array<() => void> = []
@@ -24,7 +15,6 @@ const pendingEmbeddings   = new Map<string, { resolve: (v: number[]) => void; re
 function getWorker(): Worker {
   if (worker) return worker
 
-  // Vite ?worker import — processed at build time
   worker = new Worker(
     new URL('~/workers/embeddingWorker.js', import.meta.url),
     { type: 'module' }
@@ -59,8 +49,6 @@ function getWorker(): Worker {
   return worker
 }
 
-// ─── Embed a single text string ───────────────────────────────────────────────
-
 export async function embedText(text: string): Promise<number[]> {
   const w  = getWorker()
   const id = `embed_${Date.now()}_${Math.random().toString(36).slice(2)}`
@@ -76,7 +64,6 @@ export async function embedText(text: string): Promise<number[]> {
       workerReadyCallbacks.push(send)
     }
 
-    // Timeout after 30s
     setTimeout(() => {
       if (pendingEmbeddings.has(id)) {
         pendingEmbeddings.delete(id)
@@ -86,37 +73,26 @@ export async function embedText(text: string): Promise<number[]> {
   })
 }
 
-// ─── Semantic enrichment on save ──────────────────────────────────────────────
-// Call this after a document is saved to IndexedDB.
-// Runs async — does NOT block the save flow.
-
 export async function enrichDocumentAsync(
   localId: number,
   cleanedText: string,
   vendor?: string
 ): Promise<void> {
   try {
-    // 1. Expense category (fast, sync)
     const expenseCategory = inferExpenseCategory(cleanedText, vendor)
 
-    // 2. Semantic tags (fast, sync)
     const semanticTags    = extractSemanticTags(cleanedText)
 
-    // 3. Embedding (async — MiniLM inference)
     const embedding       = await embedText(cleanedText)
 
-    // 4. Patch the record in IndexedDB
     await db.documents.update(localId, { embedding, expenseCategory, semanticTags })
 
     console.log(`[SemanticEngine] Enriched doc #${localId} → ${expenseCategory}, ${semanticTags.join(', ') || 'no tags'}`)
 
   } catch (err) {
-    // Non-fatal — document still works without embedding
     console.warn('[SemanticEngine] Enrichment failed (non-fatal):', err)
   }
 }
-
-// ─── Composable ───────────────────────────────────────────────────────────────
 
 export function useSemanticEngine() {
   const isEmbedderReady = ref(false)
@@ -124,7 +100,6 @@ export function useSemanticEngine() {
   const parsedQuery     = shallowRef<ParsedQuery | null>(null)
   const queryExplanation = ref('')
 
-  // Preload embedding worker
   if (import.meta.client) {
     const w = getWorker()
     if (workerReady) {
@@ -134,7 +109,6 @@ export function useSemanticEngine() {
     }
   }
 
-  // ── Main semantic search ────────────────────────────────────────────────────
   async function search(
     rawQuery: string,
     allDocs: DocumentRecord[],
@@ -145,12 +119,10 @@ export function useSemanticEngine() {
     isSearching.value = true
 
     try {
-      // Parse natural language → structured filters
       const parsed = parseNlQuery(rawQuery)
       parsedQuery.value    = parsed
       queryExplanation.value = explainQuery(parsed)
 
-      // Apply date filter (docs are sorted by createdAt, dates are ISO strings)
       let dateDocs = allDocs
       if (parsed.dateFrom || parsed.dateTo) {
         dateDocs = allDocs.filter(doc => {
@@ -161,10 +133,8 @@ export function useSemanticEngine() {
         })
       }
 
-      // Embed the semantic query text
       const queryEmbedding = await embedText(parsed.semanticQuery)
 
-      // Hybrid search: semantic + structured filters
       return hybridSearch(queryEmbedding, dateDocs, {
         category:        parsed.category,
         expenseCategory: parsed.expenseCategory,
@@ -175,14 +145,12 @@ export function useSemanticEngine() {
 
     } catch (err) {
       console.error('[SemanticEngine] Search failed:', err)
-      // Graceful fallback: return all docs unranked
       return allDocs.map((doc, i) => ({ doc, score: 0, rank: i + 1 }))
     } finally {
       isSearching.value = false
     }
   }
 
-  // ── Duplicate detection ─────────────────────────────────────────────────────
   async function findDuplicates(
     text: string,
     allDocs: DocumentRecord[]
