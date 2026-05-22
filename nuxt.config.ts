@@ -124,9 +124,9 @@ routeRules: {
     },
     workbox: {
       navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico,wasm,onnx,json}'],
       globIgnores: ['**/opencv.js'],
-      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      maximumFileSizeToCacheInBytes: 300 * 1024 * 1024, // 300MB to fit large NER and DeBERTa ONNX models
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/.*/i,

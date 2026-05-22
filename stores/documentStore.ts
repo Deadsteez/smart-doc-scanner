@@ -4,6 +4,7 @@ import { db } from '~/services/db'
 import type { DocumentRecord } from '~/services/db'
 import { getSupabase } from '~/services/supabaseClient'
 import { useWorkspaceStore } from '~/stores/workspaceStore'
+import { enrichDocumentAsync } from '~/composables/useSemanticEngine'
 
 export const useDocumentStore = defineStore('documents', () => {
   const documents = ref<DocumentRecord[]>([])
@@ -122,8 +123,10 @@ export const useDocumentStore = defineStore('documents', () => {
     })
 
     lastId.value = localId
-
     await reloadLocal()
+
+    // ── Semantic enrichment (non-blocking — runs in background) ────────────
+    enrichDocumentAsync(localId, doc.cleanedText, doc.extracted?.vendor).catch(() => {})
 
     if (userId) {
       await pushToSupabase(localId, userId)
