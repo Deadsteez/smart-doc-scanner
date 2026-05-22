@@ -137,7 +137,7 @@ DROP POLICY IF EXISTS "docs_select" ON public.documents;
 CREATE POLICY "docs_select" ON public.documents
   FOR SELECT USING (
     user_id = auth.uid()
-    OR workspace_id IN (SELECT public.get_my_workspaces())
+    OR workspace_id IN (SELECT * FROM public.get_my_workspaces())
   );
 
 DROP POLICY IF EXISTS "docs_insert" ON public.documents;
@@ -159,7 +159,7 @@ ALTER TABLE public.workspaces ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "workspace_select" ON public.workspaces;
 CREATE POLICY "workspace_select" ON public.workspaces
   FOR SELECT USING (
-    id IN (SELECT public.get_my_workspaces())
+    id IN (SELECT * FROM public.get_my_workspaces())
     OR owner_id = auth.uid()
   );
 
@@ -182,26 +182,26 @@ ALTER TABLE public.workspace_members ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "wm_select" ON public.workspace_members;
 CREATE POLICY "wm_select" ON public.workspace_members
   FOR SELECT USING (
-    workspace_id IN (SELECT public.get_my_workspaces())
+    workspace_id IN (SELECT * FROM public.get_my_workspaces())
   );
 
 DROP POLICY IF EXISTS "wm_insert" ON public.workspace_members;
 CREATE POLICY "wm_insert" ON public.workspace_members
   FOR INSERT WITH CHECK (
-    workspace_id IN (SELECT public.get_my_admin_workspaces())
+    workspace_id IN (SELECT * FROM public.get_my_admin_workspaces())
   );
 
 DROP POLICY IF EXISTS "wm_update" ON public.workspace_members;
 CREATE POLICY "wm_update" ON public.workspace_members
   FOR UPDATE USING (
-    workspace_id IN (SELECT public.get_my_admin_workspaces())
+    workspace_id IN (SELECT * FROM public.get_my_admin_workspaces())
   );
 
 DROP POLICY IF EXISTS "wm_delete" ON public.workspace_members;
 CREATE POLICY "wm_delete" ON public.workspace_members
   FOR DELETE USING (
     user_id = auth.uid()
-    OR workspace_id IN (SELECT public.get_my_admin_workspaces())
+    OR workspace_id IN (SELECT * FROM public.get_my_admin_workspaces())
   );
 
 
@@ -211,19 +211,47 @@ ALTER TABLE public.document_approvals ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "da_select" ON public.document_approvals;
 CREATE POLICY "da_select" ON public.document_approvals
   FOR SELECT USING (
-    workspace_id IN (SELECT public.get_my_workspaces())
+    workspace_id IN (SELECT * FROM public.get_my_workspaces())
   );
 
 DROP POLICY IF EXISTS "da_insert" ON public.document_approvals;
 CREATE POLICY "da_insert" ON public.document_approvals
   FOR INSERT WITH CHECK (
     submitted_by = auth.uid()
-    AND workspace_id IN (SELECT public.get_my_workspaces())
+    AND workspace_id IN (SELECT * FROM public.get_my_workspaces())
   );
 
 DROP POLICY IF EXISTS "da_update" ON public.document_approvals;
 CREATE POLICY "da_update" ON public.document_approvals
   FOR UPDATE USING (
-    workspace_id IN (SELECT public.get_my_admin_workspaces())
+    workspace_id IN (SELECT * FROM public.get_my_admin_workspaces())
     OR (submitted_by = auth.uid() AND status = 'rejected')
   );
+
+DROP POLICY IF EXISTS "da_delete" ON public.document_approvals;
+CREATE POLICY "da_delete" ON public.document_approvals
+  FOR DELETE USING (
+    workspace_id IN (SELECT * FROM public.get_my_admin_workspaces())
+  );
+
+
+-- ════════════════════════════════════════════════════════════
+-- PASS 3 — EXPLICIT GRANTS FOR AUTHENTICATED ROLE
+-- ════════════════════════════════════════════════════════════
+
+GRANT USAGE ON SCHEMA public TO authenticated;
+GRANT ALL ON public.documents TO authenticated;
+GRANT ALL ON public.workspaces TO authenticated;
+GRANT ALL ON public.workspace_members TO authenticated;
+GRANT ALL ON public.document_approvals TO authenticated;
+
+-- Grant execute on helper functions
+GRANT EXECUTE ON FUNCTION public.get_my_workspaces() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_my_admin_workspaces() TO authenticated;
+
+
+-- ════════════════════════════════════════════════════════════
+-- PASS 4 — RELOAD SCHEMA CACHE
+-- ════════════════════════════════════════════════════════════
+
+NOTIFY pgrst, 'reload schema';

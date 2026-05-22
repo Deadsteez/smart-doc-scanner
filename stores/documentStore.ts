@@ -191,6 +191,32 @@ export const useDocumentStore = defineStore('documents', () => {
     await reloadLocal()
   }
 
+  // Delete directly by Supabase UUID via secure server endpoint (bypasses RLS)
+  async function removeBySupabaseId(supabaseId: string, workspaceId: string): Promise<boolean> {
+    try {
+      const supabase = getSupabase()
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+      if (!token) throw new Error('Not authenticated')
+
+      await $fetch('/api/workspace/document', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+        body: { document_id: supabaseId, workspace_id: workspaceId },
+      })
+
+      // Remove from local Dexie cache
+      const local = await db.documents.where('supabaseId').equals(supabaseId).first()
+      if (local?.id) await db.documents.delete(local.id)
+
+      await reloadLocal()
+      return true
+    } catch (err) {
+      console.error('[Store] removeBySupabaseId error:', err)
+      return false
+    }
+  }
+
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => b.createdAt - a.createdAt)
   )
@@ -208,6 +234,7 @@ export const useDocumentStore = defineStore('documents', () => {
     loadAll,
     add,
     remove,
+    removeBySupabaseId,
     syncPending,
   }
 })

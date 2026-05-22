@@ -16,7 +16,11 @@ const selectedDocId = ref<string | null>(null)
 const showModal = ref(false)
 
 // ── Filter state ──────────────────────────────────────────
+const searchQuery = ref('')
 const selectedCategory = ref('all')
+const vendorFilter = ref('')
+const dateFilter = ref('')
+const amountFilter = ref('')
 
 onMounted(async () => {
   document.addEventListener('click', closeDropdown)
@@ -60,11 +64,38 @@ const allWorkspaceDocuments = computed(() => {
 })
 
 const workspaceDocuments = computed(() => {
-  if (selectedCategory.value === 'all') return allWorkspaceDocuments.value
-  return allWorkspaceDocuments.value.filter(
-    doc => doc.category?.type === selectedCategory.value
-  )
+  return allWorkspaceDocuments.value.filter(doc => {
+    const matchesCategory =
+      selectedCategory.value === 'all' ||
+      doc.category?.type === selectedCategory.value
+
+    const matchesSearch =
+      !searchQuery.value ||
+      (doc.cleanedText ?? '').toLowerCase().includes(searchQuery.value.toLowerCase())
+
+    const matchesVendor =
+      !vendorFilter.value ||
+      (doc.extracted?.vendor ?? '').toLowerCase().includes(vendorFilter.value.toLowerCase())
+
+    const matchesDate =
+      !dateFilter.value ||
+      (doc.extracted?.date ?? '').includes(dateFilter.value)
+
+    const matchesAmount =
+      !amountFilter.value ||
+      (doc.extracted?.total ?? '').includes(amountFilter.value)
+
+    return matchesCategory && matchesSearch && matchesVendor && matchesDate && matchesAmount
+  })
 })
+
+function clearFilters() {
+  searchQuery.value = ''
+  vendorFilter.value = ''
+  dateFilter.value = ''
+  amountFilter.value = ''
+  selectedCategory.value = 'all'
+}
 
 function openDocument(docId: string) {
   selectedDocId.value = docId
@@ -75,11 +106,13 @@ const selectedDoc = computed(() =>
   documentStore.documents.find(d => (d as any).supabaseId === selectedDocId.value) ?? null
 )
 
-function deleteDoc(id: string, event: Event) {
+async function deleteDoc(supabaseId: string, event: Event) {
   event.preventDefault()
   event.stopPropagation()
   if (!confirm('Delete this document from the workspace?')) return
-  documentStore.remove(id)
+  const workspaceId = workspaceStore.currentWorkspace?.id
+  if (!workspaceId) return
+  await documentStore.removeBySupabaseId(supabaseId, workspaceId)
 }
 
 function closeModal() {
@@ -200,18 +233,51 @@ function categoryClass(category: any) {
     <!-- Document list with approval status -->
     <template v-else>
 
-      <!-- Category filter pills -->
-      <div class="flex flex-wrap gap-2 mb-6">
+      <!-- Filter bar (mirrors dashboard) -->
+      <div class="space-y-3 mb-6">
+        <input
+          v-model="searchQuery"
+          placeholder="Search document text…"
+          class="w-full px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+        />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <select
+            v-model="selectedCategory"
+            class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          >
+            <option value="all">All Categories</option>
+            <option value="receipt">Receipt</option>
+            <option value="invoice">Invoice</option>
+            <option value="bill">Bill</option>
+            <option value="other">Other</option>
+          </select>
+
+          <input
+            v-model="vendorFilter"
+            placeholder="Filter by vendor…"
+            class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          />
+
+          <input
+            v-model="dateFilter"
+            type="date"
+            class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          />
+
+          <input
+            v-model="amountFilter"
+            placeholder="Filter by amount…"
+            class="px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted shadow-card focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+          />
+        </div>
+
         <button
-          v-for="cat in ['all', 'receipt', 'invoice', 'bill', 'other']"
-          :key="cat"
-          @click="selectedCategory = cat"
-          class="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all"
-          :class="selectedCategory === cat
-            ? 'bg-accent-primary text-white shadow-[0_2px_8px_rgba(14,165,233,0.25)]'
-            : 'bg-bg-tertiary text-text-muted hover:text-text-secondary hover:bg-bg-elevated'"
+          v-if="searchQuery || vendorFilter || dateFilter || amountFilter || selectedCategory !== 'all'"
+          @click="clearFilters"
+          class="text-sm text-text-muted hover:text-text-primary transition-all"
         >
-          {{ cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1) }}
+          ✕ Clear all filters
         </button>
       </div>
 
@@ -223,9 +289,9 @@ function categoryClass(category: any) {
 
       <!-- No results after filtering -->
       <div v-else-if="workspaceDocuments.length === 0" class="text-center py-14 text-text-muted">
-        <p class="text-sm">No documents match this category.</p>
-        <button @click="selectedCategory = 'all'" class="mt-2 text-xs text-accent-primary hover:text-accent-primary/80 font-medium transition-all">
-          Show all documents
+        <p class="text-sm">No documents match your filters.</p>
+        <button @click="clearFilters" class="mt-2 text-xs text-accent-primary hover:text-accent-primary/80 font-medium transition-all">
+          Clear all filters
         </button>
       </div>
 
@@ -241,7 +307,7 @@ function categoryClass(category: any) {
           <button
             class="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-red-600 dark:text-black hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
             title="Delete document"
-            @click="deleteDoc(doc.id, $event)"
+            @click="deleteDoc((doc as any).supabaseId, $event)"
           >
             <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round"
