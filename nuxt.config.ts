@@ -108,8 +108,10 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
-      runtimeCaching: [
+  globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+  globIgnores: ['**/opencv.js'],        
+  maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,  
+  runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/.*/i,
           handler: 'CacheFirst',
