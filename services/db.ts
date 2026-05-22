@@ -16,26 +16,35 @@ export interface ExtractedFields {
   items?: LineItem[]
 }
 
+export interface CategoryScores {
+  invoice: number
+  receipt: number
+  bank_statement: number
+  payment_slip: number
+  utility_bill: number
+  tax_document: number
+  contract: number
+  other: number
+}
+
+export interface DocumentCategory {
+  type: 'invoice' | 'receipt' | 'bank_statement' | 'payment_slip' | 'utility_bill' | 'tax_document' | 'contract' | 'other'
+  nlpLabel?: string
+  confidence: number
+  scores: CategoryScores
+}
+
 export interface DocumentRecord {
   id?: number
   supabaseId?: string
   userId?: string
+  workspaceId?: string
   createdAt: number
   image: string
   ocrText: string
   cleanedText: string
   extracted: ExtractedFields
-  category: {
-    type: 'invoice' | 'receipt' | 'other'
-    nlpLabel?: string       
-    confidence: number
-    scores: {
-      invoice: number
-      receipt: number
-      bank_statement?: number
-      other?: number
-    }
-  }
+  category: DocumentCategory
   synced: boolean
 }
 
@@ -44,9 +53,8 @@ class DocumentDB extends Dexie {
 
   constructor() {
     super('SmartDocScannerDB')
-    this.version(3).stores({
-      //Indexed DB schema
-      documents: '++id, createdAt, synced, supabaseId, userId'
+    this.version(4).stores({
+      documents: '++id, createdAt, synced, supabaseId, userId, workspaceId'
     })
   }
 }

@@ -10,10 +10,13 @@ public/tesseract/lang-data
 *.onnx
 # Node dependencies
 node_modules
-
+archive
 # Logs
 logs
 *.log
+
+# Evaluation exports (large JSON)
+eval-results/
 
 # Misc
 .DS_Store
@@ -24,3 +27,4 @@ logs
 .env
 .env.*
 !.env.example
+

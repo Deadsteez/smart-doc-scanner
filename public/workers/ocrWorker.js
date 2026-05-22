@@ -1,131 +1,831 @@
+// ocrWorker.js
+// Multi-variant OCR with scoring, merging, and layout-aware region crop.
+// Adapted for SmartDoc Scanner (invoices, receipts, bank statements).
+//
+// Fixes applied vs previous version:
+//  1. AMOUNT_PARAMS are now actually applied to the Tesseract worker via
+//     worker.setParameters() before each amount-band pass, and restored
+//     to DEFAULT_PARAMS after. Previously AMOUNT_PARAMS was defined but
+//     never sent to Tesseract — every variant ran with DEFAULT_PARAMS.
+//  2. mergeTexts() quality gate now allows Devanagari (U+0900–U+097F) and
+//     Arabic (U+0600–U+06FF) characters so Hindi / Marathi / Urdu lines
+//     are not silently dropped when selectedLanguage includes 'hin'/'mar'.
+//  3. Bitmap reuse bug in prepareDocumentRegionVariants and
+//     prepareAmountBandVariants: each call to cropRegion() was sharing the
+//     same OffscreenCanvas pixels because binariseCanvas modifies in-place.
+//     Now each variant draws a fresh crop before modifying it.
+//  4. runVariants early-exit is guarded so it can't fire on the very first
+//     result (requires at least 2 variants processed).
+//  5. The confidence-filtered fallback pass in mode:'full' now correctly
+//     skips the extra Tesseract job when filteredText would be empty.
+
 console.log('[OCR Worker] Starting...')
 
 importScripts('/tesseract/tesseract.min.js')
 
 let currentLanguage = 'eng'
-let scheduler = null
-let isInitializing = false
-let initQueue = []
+let scheduler       = null
+let workerRef       = null   // keep a direct reference so we can call setParameters
+let isInitializing  = false
+let initQueue       = []
+
+// ---------------------------------------------------------------------------
+// Tesseract parameter presets
+// ---------------------------------------------------------------------------
+
+const DEFAULT_PARAMS = {
+  tessedit_pageseg_mode:       '3',
+  preserve_interword_spaces:   '1',
+  tessedit_minimal_confidence: '30',
+}
+
+// Applied only during amount-band passes.
+// Whitelist restricts recognition to digits, punctuation, and currency symbols
+// so Tesseract stops guessing letters for large printed numbers.
+const AMOUNT_PARAMS = {
+  tessedit_pageseg_mode:       '7',   // single text-line mode
+  tessedit_char_whitelist:     '0123456789.,RrSs$₹',
+  preserve_interword_spaces:   '1',
+}
+
+// ---------------------------------------------------------------------------
+// DocType normalisation
+// ---------------------------------------------------------------------------
+
+function mapDocType(raw) {
+  switch ((raw ?? '').toLowerCase()) {
+    case 'invoice':        return 'invoice'
+    case 'receipt':        return 'receipt'
+    case 'bank_statement':
+    case 'bank statement':
+    case 'bankstatement':  return 'bank_statement'
+    default:               return 'other'
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Scheduler / worker lifecycle
+// ---------------------------------------------------------------------------
 
 async function getScheduler(language = 'eng') {
-  // Recreate scheduler only when selected OCR language changes
+  if (scheduler && currentLanguage === language) return scheduler
+
   if (scheduler && currentLanguage !== language) {
     await scheduler.terminate()
-    scheduler = null
+    scheduler  = null
+    workerRef  = null
   }
-  
-  if (scheduler && currentLanguage === language) return scheduler
-  
+
   currentLanguage = language
 
   if (isInitializing) {
-    return new Promise((resolve) => initQueue.push(resolve))
+    return new Promise((resolve, reject) => initQueue.push({ resolve, reject }))
   }
 
   isInitializing = true
 
-  postMessage({ type: 'progress', progress: 0.05, status: 'Loading OCR engine...' })
+  try {
+    postMessage({ type: 'progress', progress: 0.05, status: 'Loading OCR engine...' })
 
-  scheduler = Tesseract.createScheduler()
+    scheduler = Tesseract.createScheduler()
 
-  const worker = await Tesseract.createWorker(language, 1, {
-    langPath: self.location.origin + '/tesseract/lang-data',
-    gzip: false,
-    logger: message => {
-      if (message.status === 'loading tesseract core' || message.status === 'loading language traineddata') {
-        postMessage({ type: 'progress', progress: 0.1, status: message.status })
+    const worker = await Tesseract.createWorker(language, 1, {
+      langPath: self.location.origin + '/tesseract/lang-data',
+      gzip: false,
+      logger: message => {
+        if (message.status === 'loading tesseract core') {
+          postMessage({ type: 'progress', progress: 0.08, status: 'Loading OCR core...' })
+        } else if (message.status === 'loading language traineddata') {
+          const scaled = 0.1 + ((message.progress ?? 0) * 0.08)
+          postMessage({
+            type: 'progress',
+            progress: parseFloat(scaled.toFixed(2)),
+            status: `Loading language data... ${Math.round((message.progress ?? 0) * 100)}%`
+          })
+        }
       }
-    }
-  })
+    })
 
-  await worker.setParameters({
-    tessedit_pageseg_mode: '3',
-    preserve_interword_spaces: '1',
-    tessedit_minimal_confidence: '30',
-  })
+    await worker.setParameters(DEFAULT_PARAMS)
+    scheduler.addWorker(worker)
+    workerRef = worker   // ← save direct reference for setParameters calls
 
-  scheduler.addWorker(worker)
+    postMessage({ type: 'progress', progress: 0.2, status: 'OCR engine ready' })
 
-  postMessage({ type: 'progress', progress: 0.2, status: 'OCR engine ready' })
+    initQueue.forEach(({ resolve }) => resolve(scheduler))
+    initQueue = []
 
-  initQueue.forEach(resolve => resolve(scheduler))
-  initQueue = []
-  isInitializing = false
+    console.log('[OCR Worker] Scheduler ready')
+    return scheduler
 
-  console.log('[OCR Worker] Scheduler ready')
-  return scheduler
+  } catch (err) {
+    scheduler  = null
+    workerRef  = null
+    initQueue.forEach(({ reject }) => reject(err))
+    initQueue  = []
+    throw err
+  } finally {
+    isInitializing = false
+  }
 }
 
+// ---------------------------------------------------------------------------
+// Image helpers — all operate on OffscreenCanvas
+// ---------------------------------------------------------------------------
+
+async function loadBitmap(dataUrl) {
+  const res  = await fetch(dataUrl)
+  const blob = await res.blob()
+  return createImageBitmap(blob)
+}
+
+/**
+ * Draw a relative crop of `bitmap` onto a new OffscreenCanvas scaled by `scale`.
+ * Crop coords: { x, y, width, height } are fractions (0–1) of bitmap dimensions.
+ * Returns a fresh OffscreenCanvas — callers are free to mutate its pixels.
+ */
+async function cropRegion(bitmap, crop, scale = 2) {
+  const sx = Math.max(0, Math.floor(bitmap.width  * crop.x))
+  const sy = Math.max(0, Math.floor(bitmap.height * crop.y))
+  const sw = Math.max(1, Math.floor(bitmap.width  * crop.width))
+  const sh = Math.max(1, Math.floor(bitmap.height * crop.height))
+
+  // Never exceed 4096 px on either axis (GPU/Canvas limit)
+  const safeScale = Math.min(scale, 4096 / Math.max(sw, sh))
+  const outW      = Math.max(1, Math.floor(sw * safeScale))
+  const outH      = Math.max(1, Math.floor(sh * safeScale))
+
+  const canvas = new OffscreenCanvas(outW, outH)
+  const ctx    = canvas.getContext('2d')
+  ctx.imageSmoothingEnabled = true
+  ctx.imageSmoothingQuality = 'high'
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, outW, outH)
+  return canvas
+}
+
+/**
+ * Sample average luminance from a small top-left tile.
+ * Returns 0–255; < 128 means the background is dark.
+ */
+function estimateLuminance(canvas) {
+  const ctx  = canvas.getContext('2d')
+  const sw   = Math.min(80, canvas.width)
+  const sh   = Math.min(80, canvas.height)
+  const data = ctx.getImageData(0, 0, sw, sh).data
+  let total  = 0, count = 0
+  for (let i = 0; i < data.length; i += 4) {
+    total += (data[i] ?? 0) * 0.299 + (data[i + 1] ?? 0) * 0.587 + (data[i + 2] ?? 0) * 0.114
+    count++
+  }
+  return count ? total / count : 255
+}
+
+/**
+ * Convert every pixel to black or white in-place.
+ * If invert=true the white/black assignment is flipped (for dark-bg images).
+ */
+function binariseCanvas(canvas, { invert = false, threshold = 158 } = {}) {
+  const ctx     = canvas.getContext('2d')
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const d       = imgData.data
+  for (let i = 0; i < d.length; i += 4) {
+    let g = (d[i] ?? 0) * 0.299 + (d[i + 1] ?? 0) * 0.587 + (d[i + 2] ?? 0) * 0.114
+    g = g < threshold ? 0 : 255
+    if (invert) g = 255 - g
+    d[i] = d[i + 1] = d[i + 2] = g
+  }
+  ctx.putImageData(imgData, 0, 0)
+  return canvas
+}
+
+/**
+ * Convert to grayscale + contrast-stretch in-place.
+ */
+function grayscaleCanvas(canvas, { invert = false, contrast = 1.45 } = {}) {
+  const ctx     = canvas.getContext('2d')
+  const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const d       = imgData.data
+  for (let i = 0; i < d.length; i += 4) {
+    let g = (d[i] ?? 0) * 0.299 + (d[i + 1] ?? 0) * 0.587 + (d[i + 2] ?? 0) * 0.114
+    g = ((g - 128) * contrast) + 128
+    g = Math.min(255, Math.max(0, g))
+    if (invert) g = 255 - g
+    d[i] = d[i + 1] = d[i + 2] = g
+  }
+  ctx.putImageData(imgData, 0, 0)
+  return canvas
+}
+
+/**
+ * OffscreenCanvas → base64 data URL via Blob + FileReader.
+ * (OffscreenCanvas.toDataURL is not universally available in workers.)
+ */
+function canvasToDataUrl(canvas, format = 'image/png') {
+  return new Promise((resolve, reject) => {
+    canvas.convertToBlob({ type: format })
+      .then(blob => {
+        const reader   = new FileReader()
+        reader.onload  = () => resolve(reader.result)
+        reader.onerror = () => reject(new Error('canvasToDataUrl: FileReader failed'))
+        reader.readAsDataURL(blob)
+      })
+      .catch(reject)
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Text normalisation helpers
+// ---------------------------------------------------------------------------
+
+function normaliseOcrText(text) {
+  return text
+    .replace(/\r\n/g, '\n')
+    .replace(/â‚¹/g, '₹')      // garbled UTF-8 rupee
+    .replace(/\u20B9/g, '₹')   // Unicode rupee sign → consistent char
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{2,}/g, '\n')
+    .trim()
+}
+
+/**
+ * Extended normalisation for amount paths.
+ * Adds the smart rupee-as-"2" correction from UPI SnapPay:
+ *   "2 41"  → "₹ 41"   (space-separated; not a year/large ID)
+ *   "241"   → "₹41"    (line-leading 2 + exactly 2-3 digits)
+ */
+function normaliseAmountText(text) {
+  let s = normaliseOcrText(text)
+
+  // Pattern 1: "2 " followed by 2-4 digits (not preceded by another digit)
+  s = s.replace(/(?<!\d)\b2\s+(\d{2,4}(?:[,.]\d+)?)\b/g, '₹ $1')
+
+  // Pattern 2: line starts with "2" + exactly 2-3 digits
+  s = s.replace(/^2(\d{2,3})\b/gm, (match, digits) => {
+    const full = parseInt('2' + digits, 10)
+    if (full >= 2000 && full <= 2099) return match   // year
+    if (full > 2200)                  return match   // large reference number
+    return '₹' + digits
+  })
+
+  return s
+}
+
+// ---------------------------------------------------------------------------
+// Scoring
+// ---------------------------------------------------------------------------
+
+function scoreText(text, confidence) {
+  let score = confidence
+  if (/₹|\br(?=\d)|rs|inr|\$/i.test(text))                                          score += 18
+  if (/\b\d+(?:\.\d{1,2})\b/.test(text))                                             score += 8
+  if (/paid|received|total|invoice|amount|completed|successful/i.test(text))         score += 8
+  if (/invoice\s*(no|number|#)|receipt\s*(no|number|#)|transaction\s*id/i.test(text)) score += 5
+  if (/opening\s*balance|closing\s*balance|account\s*statement/i.test(text))         score += 8
+  if (/\b(neft|rtgs|imps|upi|ifsc)\b/i.test(text))                                   score += 5
+  return score
+}
+
+function scoreAmountBandText(text, confidence) {
+  let score = confidence
+  if (/₹|\br(?=\d)|rs|inr|\$/i.test(text))                                          score += 24
+  if (/\b\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?\b/.test(text))                          score += 18
+  // A line that is *only* a money amount scores very highly
+  if (/^\s*(?:₹|r|rs|\$)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,6}(?:\.\d{1,2})?)\s*$/i.test(text)) score += 28
+  if (/total|amount|paid|invoice/i.test(text))                                        score += 4
+  if (text.length <= 32)                                                               score += 6
+  return score
+}
+
+// ---------------------------------------------------------------------------
+// Text merging — deduplicate lines across variants
+// ---------------------------------------------------------------------------
+
+/**
+ * Accept texts sorted best-first. For each line across all variants, only
+ * the first occurrence (highest-quality) is kept.
+ *
+ * Quality gate: at least 35% of non-whitespace characters must be
+ * alphanumeric, currency, or common punctuation — BUT we explicitly allow
+ * Devanagari (U+0900–U+097F) and Arabic/Urdu (U+0600–U+06FF) so that
+ * Hindi and Marathi text is not silently discarded.
+ */
+function mergeTexts(texts) {
+  const seen   = new Set()
+  const merged = []
+
+  for (const text of texts) {
+    for (const line of normaliseOcrText(text).split('\n')) {
+      const trimmed = line.trim()
+      if (!trimmed) continue
+
+      // Quality gate — at least 35% of chars must be "useful"
+      const useful = (trimmed.match(
+        // Latin alnum + common doc chars + Devanagari + Arabic/Urdu
+        /[a-zA-Z0-9$₹.,:#\-\/\u0900-\u097F\u0600-\u06FF]/g
+      ) ?? []).length
+      if (useful / trimmed.length < 0.35) continue
+
+      const key = trimmed.toLowerCase()
+      if (seen.has(key)) continue
+      seen.add(key)
+      merged.push(trimmed)
+    }
+  }
+
+  return merged.join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// Amount extraction from a small crop
+// ---------------------------------------------------------------------------
+
+function extractLikelyAmount(text) {
+  const norm = normaliseAmountText(text)
+
+  // Prefer a standalone amount-only line (nothing else on the line)
+  const exactLine = norm.split('\n').map(l => l.trim()).find(l =>
+    /^(?:₹|rs\.?|inr|\$)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,6}(?:\.\d{1,2})?)$/i.test(l)
+  )
+  if (exactLine) {
+    const m = exactLine.match(/(\d[\d,.]*)/)
+    if (m) {
+      const v = parseFloat(m[1].replace(/,/g, ''))
+      if (isFinite(v) && v > 0 && v <= 1000000) return v
+    }
+  }
+
+  // Fall back to first currency-prefixed number
+  const m = norm.match(/(?:₹|rs\.?|inr|\$)\s*([\d,]+(?:\.\d{1,2})?)/i)
+  if (m) {
+    const v = parseFloat(m[1].replace(/,/g, ''))
+    if (isFinite(v) && v > 0 && v <= 1000000) return v
+  }
+
+  return null
+}
+
+// ---------------------------------------------------------------------------
+// Document-type-aware layout crops
+// ---------------------------------------------------------------------------
+
+/**
+ * Returns region crop definitions for the given docType.
+ * Coordinates are relative (0–1 fraction of image dimensions).
+ *
+ * invoice      — header top-left, ref top-right, items middle, totals bottom-right
+ * receipt      — merchant header top, body middle, total bottom
+ * bank_statement — account header top, transaction rows centre, footer bottom
+ * other          — generic top + bottom sweeps
+ */
+function getDocumentTypeCrops(docType) {
+  switch (docType) {
+    case 'invoice':
+      return [
+        { x: 0.0,  y: 0.0,  width: 0.65, height: 0.30, scale: 3.5, label: 'invoice-header' },
+        { x: 0.55, y: 0.0,  width: 0.45, height: 0.25, scale: 3.8, label: 'invoice-ref'    },
+        { x: 0.0,  y: 0.28, width: 1.0,  height: 0.45, scale: 2.8, label: 'invoice-items'  },
+        { x: 0.45, y: 0.70, width: 0.55, height: 0.30, scale: 4.5, label: 'invoice-total'  },
+      ]
+
+    case 'receipt':
+      return [
+        { x: 0.0, y: 0.0,  width: 1.0, height: 0.25, scale: 3.5, label: 'receipt-header' },
+        { x: 0.0, y: 0.20, width: 1.0, height: 0.55, scale: 2.5, label: 'receipt-body'   },
+        { x: 0.0, y: 0.68, width: 1.0, height: 0.32, scale: 4.0, label: 'receipt-total'  },
+      ]
+
+    case 'bank_statement':
+      return [
+        { x: 0.0, y: 0.0,  width: 1.0, height: 0.20, scale: 3.0, label: 'stmt-header' },
+        { x: 0.0, y: 0.18, width: 1.0, height: 0.65, scale: 2.5, label: 'stmt-body'   },
+        { x: 0.0, y: 0.78, width: 1.0, height: 0.22, scale: 3.0, label: 'stmt-footer' },
+      ]
+
+    default:
+      return [
+        { x: 0.0, y: 0.0,  width: 1.0, height: 0.55, scale: 2.6, label: 'top-generic'    },
+        { x: 0.0, y: 0.45, width: 1.0, height: 0.55, scale: 2.6, label: 'bottom-generic' },
+      ]
+  }
+}
+
+/**
+ * Amount-band crops: narrow strips aimed at where the total lives.
+ * Heavily upscaled so Tesseract reads small printed figures cleanly.
+ */
+function getAmountBandCrops(docType) {
+  switch (docType) {
+    case 'invoice':
+      return [
+        { x: 0.40, y: 0.72, width: 0.60, height: 0.08, scale: 5.5, label: 'inv-amount-1' },
+        { x: 0.38, y: 0.76, width: 0.62, height: 0.09, scale: 5.5, label: 'inv-amount-2' },
+        { x: 0.35, y: 0.80, width: 0.65, height: 0.09, scale: 6.0, label: 'inv-amount-3' },
+        { x: 0.30, y: 0.84, width: 0.70, height: 0.10, scale: 6.0, label: 'inv-amount-4' },
+        { x: 0.25, y: 0.88, width: 0.75, height: 0.10, scale: 6.5, label: 'inv-amount-5' },
+      ]
+
+    case 'receipt':
+      return [
+        { x: 0.20, y: 0.70, width: 0.60, height: 0.07, scale: 5.5, label: 'rec-amount-1' },
+        { x: 0.18, y: 0.74, width: 0.64, height: 0.08, scale: 5.5, label: 'rec-amount-2' },
+        { x: 0.15, y: 0.78, width: 0.70, height: 0.09, scale: 6.0, label: 'rec-amount-3' },
+        { x: 0.10, y: 0.82, width: 0.80, height: 0.09, scale: 6.0, label: 'rec-amount-4' },
+        { x: 0.05, y: 0.86, width: 0.90, height: 0.10, scale: 6.5, label: 'rec-amount-5' },
+      ]
+
+    case 'bank_statement':
+      // Balance column is typically right-aligned
+      return [
+        { x: 0.60, y: 0.18, width: 0.40, height: 0.65, scale: 3.5, label: 'stmt-amount-col'   },
+        { x: 0.55, y: 0.75, width: 0.45, height: 0.12, scale: 5.0, label: 'stmt-amount-foot'  },
+        { x: 0.50, y: 0.80, width: 0.50, height: 0.12, scale: 5.0, label: 'stmt-amount-foot2' },
+      ]
+
+    default:
+      return [
+        { x: 0.30, y: 0.65, width: 0.70, height: 0.10, scale: 5.0, label: 'gen-amount-1' },
+        { x: 0.25, y: 0.72, width: 0.75, height: 0.10, scale: 5.0, label: 'gen-amount-2' },
+        { x: 0.20, y: 0.78, width: 0.80, height: 0.10, scale: 5.5, label: 'gen-amount-3' },
+      ]
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Variant preparation
+// ---------------------------------------------------------------------------
+
+async function prepareBaseVariants(imageDataUrl) {
+  const bitmap   = await loadBitmap(imageDataUrl)
+  const variants = []
+
+  // 1. Full image — grayscale, contrast-boosted
+  {
+    const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
+    grayscaleCanvas(canvas, { contrast: 1.45, invert: estimateLuminance(canvas) < 128 })
+    variants.push({ label: 'full-grayscale', imageData: await canvasToDataUrl(canvas) })
+  }
+
+  // 2. Full image — binarised (black/white)
+  {
+    const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
+    const lum    = estimateLuminance(canvas)
+    binariseCanvas(canvas, { invert: lum < 128, threshold: lum < 128 ? 120 : 165 })
+    variants.push({ label: 'full-binary', imageData: await canvasToDataUrl(canvas) })
+  }
+
+  // 3. Explicit invert — catches white-on-dark layouts
+  {
+    const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
+    binariseCanvas(canvas, { invert: true, threshold: 120 })
+    variants.push({ label: 'full-inverted', imageData: await canvasToDataUrl(canvas) })
+  }
+
+  // 4. Top 55% — header / vendor / reference fields (extra upscale)
+  {
+    const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 0.55 }, 2.6)
+    binariseCanvas(canvas, { invert: estimateLuminance(canvas) < 128, threshold: 168 })
+    variants.push({ label: 'top-binary', imageData: await canvasToDataUrl(canvas) })
+  }
+
+  // 5. Bottom 50% — totals / footer row (extra upscale)
+  {
+    const canvas = await cropRegion(bitmap, { x: 0, y: 0.5, width: 1, height: 0.5 }, 2.6)
+    binariseCanvas(canvas, { invert: estimateLuminance(canvas) < 128, threshold: 168 })
+    variants.push({ label: 'bottom-binary', imageData: await canvasToDataUrl(canvas) })
+  }
+
+  return variants
+}
+
+/**
+ * FIX 3: Each variant draws a fresh crop independently before mutating pixels.
+ * The original version mutated the same canvas across variants, causing
+ * the second variant to re-binarise already-binarised pixels.
+ */
+async function prepareDocumentRegionVariants(imageDataUrl, docType) {
+  const crops    = getDocumentTypeCrops(docType)
+  if (!crops.length) return []
+
+  const bitmap   = await loadBitmap(imageDataUrl)
+  const variants = []
+
+  for (const crop of crops) {
+    // Measure luminance from a 1× crop (cheap, unmodified)
+    const lumCanvas = await cropRegion(bitmap, crop, 1)
+    const lum       = estimateLuminance(lumCanvas)
+
+    // Binarised variant — fresh crop
+    const bin = await cropRegion(bitmap, crop, crop.scale ?? 2)
+    binariseCanvas(bin, { invert: lum < 150, threshold: lum < 150 ? 120 : 170 })
+    variants.push({ label: `${crop.label}-binary`, imageData: await canvasToDataUrl(bin) })
+
+    // Dark backgrounds also get an explicit hard-invert variant
+    if (lum < 150) {
+      const inv = await cropRegion(bitmap, crop, crop.scale ?? 2)  // ← fresh crop
+      binariseCanvas(inv, { invert: true, threshold: 126 })
+      variants.push({ label: `${crop.label}-inverted`, imageData: await canvasToDataUrl(inv) })
+    }
+  }
+
+  return variants
+}
+
+/**
+ * FIX 3 (same): Each band builds three fresh crops independently.
+ */
+async function prepareAmountBandVariants(imageDataUrl, docType) {
+  const bands    = getAmountBandCrops(docType)
+  if (!bands.length) return []
+
+  const bitmap   = await loadBitmap(imageDataUrl)
+  const variants = []
+
+  for (const band of bands) {
+    // Luminance sample from 1× — cheap
+    const lumCanvas = await cropRegion(bitmap, band, 1)
+    const lum       = estimateLuminance(lumCanvas)
+
+    // Grayscale high-contrast — fresh crop
+    const gray = await cropRegion(bitmap, band, band.scale ?? 5)
+    grayscaleCanvas(gray, { invert: lum < 160, contrast: 1.7 })
+    variants.push({ label: `${band.label}-grayscale`, imageData: await canvasToDataUrl(gray) })
+
+    // Binary — fresh crop
+    const bin = await cropRegion(bitmap, band, band.scale ?? 5)
+    binariseCanvas(bin, { invert: lum < 160, threshold: lum < 160 ? 132 : 176 })
+    variants.push({ label: `${band.label}-binary`, imageData: await canvasToDataUrl(bin) })
+
+    // Hard-invert — fresh crop (catches amounts on coloured badge backgrounds)
+    const inv = await cropRegion(bitmap, band, band.scale ?? 5)
+    binariseCanvas(inv, { invert: true, threshold: 132 })
+    variants.push({ label: `${band.label}-inverted`, imageData: await canvasToDataUrl(inv) })
+  }
+
+  return variants
+}
+
+// ---------------------------------------------------------------------------
+// Core OCR variant runner
+// ---------------------------------------------------------------------------
+
+/**
+ * FIX 1: AMOUNT_PARAMS are now actually applied to the Tesseract worker
+ * before running amount-band variants and restored to DEFAULT_PARAMS after.
+ * Previously AMOUNT_PARAMS was defined but never sent to Tesseract, so every
+ * variant silently ran with DEFAULT_PARAMS (no whitelist, pageseg_mode 3).
+ *
+ * FIX 4: earlyExitFn cannot fire on the very first result to avoid
+ * abandoning a variant pass before we have any meaningful comparison baseline.
+ */
+async function runVariants(sched, variants, mode = 'default', earlyExitFn) {
+  const results = []
+
+  // Apply mode-specific Tesseract parameters before the loop
+  if (workerRef) {
+    await workerRef.setParameters(
+      mode === 'amount' ? AMOUNT_PARAMS : DEFAULT_PARAMS
+    )
+  }
+
+  try {
+    for (let vi = 0; vi < variants.length; vi++) {
+      const variant = variants[vi]
+      try {
+        const result     = await sched.addJob('recognize', variant.imageData)
+        const rawText    = result.data.text ?? ''
+        const text       = mode === 'amount'
+          ? normaliseAmountText(rawText)
+          : normaliseOcrText(rawText)
+        const confidence = result.data.confidence ?? 0
+        const score      = mode === 'amount'
+          ? scoreAmountBandText(text, confidence)
+          : scoreText(text, confidence)
+
+        results.push({ label: variant.label, text, confidence, score })
+
+        // FIX 4: only consider early exit after the second variant
+        if (vi >= 1 && earlyExitFn && earlyExitFn(text, score)) {
+          console.log(`[OCR Worker] Early exit triggered on variant: ${variant.label}`)
+          break
+        }
+      } catch (err) {
+        console.warn(`[OCR Worker] Variant ${variant.label} failed:`, err)
+      }
+    }
+  } finally {
+    // Always restore DEFAULT_PARAMS so subsequent passes aren't affected
+    if (workerRef && mode === 'amount') {
+      await workerRef.setParameters(DEFAULT_PARAMS)
+    }
+  }
+
+  return results
+}
+
+/**
+ * Confidence-based word filter — rebuilds OCR text dropping words below threshold.
+ * Used as a fallback quality pass on the best single variant.
+ */
+function buildFilteredText(words, lines) {
+  const CONFIDENCE_THRESHOLD = 55
+  const lineMap = new Map()
+
+  for (let wordIdx = 0; wordIdx < words.length; wordIdx++) {
+    const word = words[wordIdx]
+    if (!word.text?.trim()) continue
+
+    let lineIdx = -1
+    for (let i = 0; i < lines.length; i++) {
+      const lineWords = lines[i].words ?? []
+      for (let j = 0; j < lineWords.length; j++) {
+        if (lineWords[j] === word) { lineIdx = i; break }
+      }
+      if (lineIdx >= 0) break
+    }
+    const key = lineIdx >= 0 ? lineIdx : Math.round((word.bbox?.y0 ?? 0) / 20)
+    if (!lineMap.has(key)) lineMap.set(key, [])
+    lineMap.get(key).push(word.confidence >= CONFIDENCE_THRESHOLD ? word.text : '')
+  }
+
+  return [...lineMap.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, ws]) => ws.filter(Boolean).join(' '))
+    .filter(l => l.trim())
+    .join('\n')
+}
+
+// ---------------------------------------------------------------------------
+// Amount candidate scoring for region pass
+// ---------------------------------------------------------------------------
+
+function scoreParsedAmountCandidate(result, bandIndex) {
+  const norm  = normaliseAmountText(result.text)
+  const lines = norm.split('\n').map(l => l.trim()).filter(Boolean)
+
+  const exactLine = lines.find(l =>
+    /^(?:₹|rs\.?|inr|\$)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,6}(?:\.\d{1,2})?)$/i.test(l)
+  ) ?? ''
+
+  const amount = extractLikelyAmount(norm)
+  if (amount === null) return null
+
+  let score = result.score
+  // Band position bonus: bands nearer to the expected total zone score higher
+  score += Math.max(0, 20 - Math.abs((bandIndex ?? 3) - 3) * 4)
+
+  if (exactLine)                                                                    score += 34
+  if (/^(?:₹|rs\.?|inr|\$)/i.test(exactLine))                                     score += 26
+  if (lines.length === 1)                                                           score += 12
+  if (lines.length > 2)                                                             score -= 14
+  if (/^\d{1,2}$/.test(exactLine || norm))                                         score -= 18   // single/double digit — unlikely total
+  if (amount < 100 && !/^(?:₹|rs\.?|inr|\$)/i.test(exactLine))                   score -= 8
+  if (/\b\d{7,}\b/.test(norm))                                                      score -= 20  // looks like a reference/phone number
+  if (norm.replace(/\b(?:rs|inr)\b/gi, '').replace(/[₹\d\s.,]/g, '').match(/[A-Za-z]{2,}/)) score -= 20
+  if ((exactLine || norm).length <= 8)                                              score += 10
+
+  return { amount, text: norm, label: result.label, confidence: result.confidence, score }
+}
+
+// ---------------------------------------------------------------------------
+// Message handler
+// ---------------------------------------------------------------------------
+
 onmessage = async (e) => {
-  const { image, language = 'eng' } = e.data
-  
+  const {
+    image,
+    language = 'eng',
+    docType: rawDocType = 'other',
+    mode    = 'full',
+  } = e.data
+
+  const docType = mapDocType(rawDocType)
+
   if (!image) {
     postMessage({ type: 'error', error: 'No image provided' })
     return
   }
 
-  console.log('[OCR Worker] Recognition request received')
+  console.log(`[OCR Worker] Request — mode:${mode} docType:${docType} lang:${language}`)
 
   try {
     const sched = await getScheduler(language)
 
-    postMessage({ type: 'progress', progress: 0.25, status: 'Recognizing text...' })
+    // ── MODE: full (first pass — multi-variant) ───────────────────────────────
+    if (mode === 'full') {
+      postMessage({ type: 'progress', progress: 0.25, status: 'Preparing image variants...' })
 
-    const result = await sched.addJob('recognize', image)
+      const variants = await prepareBaseVariants(image)
 
-    postMessage({ type: 'progress', progress: 0.95, status: 'Processing results...' })
+      postMessage({ type: 'progress', progress: 0.35, status: 'Recognizing text...' })
 
-    let filteredText = result.data.text
+      const results    = await runVariants(sched, variants)
+      const sorted     = [...results].sort((a, b) => b.score - a.score)
+      const mergedText = mergeTexts(sorted.map(r => r.text))
 
-    if (result.data.words?.length) {
-      filteredText = buildFilteredText(result.data.words, result.data.lines)
+      postMessage({ type: 'progress', progress: 0.85, status: 'Merging results...' })
+
+      // FIX 5: only run the filtered-text fallback pass when it won't return empty
+      let finalText = mergedText
+      const bestVariant = variants.find(v => v.label === sorted[0]?.label)
+      if (bestVariant && mergedText.length > 0) {
+        try {
+          const rawBest = await sched.addJob('recognize', bestVariant.imageData)
+          const words   = rawBest?.data?.words ?? []
+          const lines   = rawBest?.data?.lines ?? []
+          if (words.length > 0) {
+            const filteredText = buildFilteredText(words, lines)
+            // Use whichever is more complete
+            if (filteredText.length > 0 && filteredText.length > mergedText.length) {
+              finalText = filteredText
+            }
+          }
+        } catch (filterErr) {
+          console.warn('[OCR Worker] Filtered-text fallback failed, using merged:', filterErr)
+        }
+      }
+
+      postMessage({ type: 'progress', progress: 1.0, status: 'Done' })
+
+      postMessage({
+        type:         'result',
+        text:         finalText,
+        rawText:      sorted[0]?.text ?? '',
+        confidence:   Math.max(...results.map(r => r.confidence), 0),
+        words:        [],   // words from all variants would be enormous; omit
+        variantCount: results.length,
+      })
     }
 
-    console.log(`[OCR Worker] Done. Confidence: ${result.data.confidence?.toFixed(1)}%`)
+    // ── MODE: region (second targeted pass) ──────────────────────────────────
+    else if (mode === 'region') {
+      postMessage({ type: 'progress', progress: 0.1, status: 'Preparing region crops...' })
 
-    postMessage({
-      type: 'result',
-      text: filteredText,
-      rawText: result.data.text,
-      confidence: result.data.confidence,
-      words: result.data.words?.map(word => ({
-        text: word.text,
-        confidence: word.confidence,
-        bbox: word.bbox
-      }))
-    })
+      const regionVariants = await prepareDocumentRegionVariants(image, docType)
+      const amountVariants = await prepareAmountBandVariants(image, docType)
+
+      postMessage({ type: 'progress', progress: 0.3, status: 'Running region OCR...' })
+
+      const regionResults = regionVariants.length
+        ? await runVariants(sched, regionVariants)
+        : []
+
+      postMessage({ type: 'progress', progress: 0.6, status: 'Running amount-band OCR...' })
+
+      // Amount-band pass — uses AMOUNT_PARAMS (FIX 1 lands here via runVariants)
+      const amountResults = amountVariants.length
+        ? await runVariants(sched, amountVariants, 'amount', (text, score) => {
+            const norm         = normaliseAmountText(text)
+            const hasCleanLine = norm.split('\n').some(l =>
+              /^(?:₹|rs\.?|inr|\$)\s*\d[\d,]*(?:\.\d{1,2})?$/i.test(l.trim())
+            )
+            // Early exit only after 2nd variant (FIX 4 is inside runVariants)
+            return score >= 120 && extractLikelyAmount(norm) !== null && hasCleanLine
+          })
+        : []
+
+      // Score amount candidates and pick the best
+      const amountCandidates = amountResults
+        .map((r, i) => scoreParsedAmountCandidate(r, i))
+        .filter(Boolean)
+        .sort((a, b) => b.score - a.score)
+
+      const bestAmount = amountCandidates[0]?.amount ?? null
+
+      // Take the top-2 candidates that are within 18 points of the winner
+      const amountTexts = bestAmount
+        ? amountCandidates
+            .filter(c => c.score >= (amountCandidates[0].score - 18))
+            .slice(0, 2)
+            .map(c => c.text)
+        : []
+
+      // Stitch: authoritative amount line first (NLP sees it immediately),
+      // then deduped region text, then amount candidate texts
+      const mergedRegion = mergeTexts([
+        bestAmount ? `Amount ₹${bestAmount}` : '',
+        ...regionResults.map(r => r.text),
+        ...amountTexts,
+      ].filter(Boolean))
+
+      postMessage({ type: 'progress', progress: 1.0, status: 'Done' })
+
+      postMessage({
+        type:           'result',
+        text:           mergedRegion,
+        rawText:        mergedRegion,
+        confidence:     Math.max(
+          ...regionResults.map(r => r.confidence),
+          ...amountResults.map(r => r.confidence),
+          0
+        ),
+        detectedAmount: bestAmount,
+        words:          [],
+        isRegionPass:   true,
+      })
+    }
 
   } catch (err) {
     console.error('[OCR Worker] Error:', err)
     postMessage({ type: 'error', error: String(err) })
   }
-}
-
-// Rebuild OCR text while dropping low-confidence words
-function buildFilteredText(words, lines) {
-  const CONFIDENCE_THRESHOLD = 40
-
-  const lineMap = new Map()
-
-  for (const word of words) {
-    if (!word.text?.trim()) continue
-
-    const lineIdx = lines?.findIndex(l =>
-      l.words?.some(w => w.text === word.text && w.bbox?.x0 === word.bbox?.x0)
-    ) ?? -1
-
-    const key = lineIdx >= 0 ? lineIdx : Math.round(word.bbox?.y0 / 20)
-
-    if (!lineMap.has(key)) lineMap.set(key, [])
-
-    lineMap.get(key).push(
-      word.confidence >= CONFIDENCE_THRESHOLD ? word.text : ''
-    )
-  }
-
-  return [...lineMap.entries()]
-    .sort((a, b) => a[0] - b[0])
-    .map(([, words]) => words.filter(Boolean).join(' '))
-    .filter(line => line.trim())
-    .join('\n')
 }

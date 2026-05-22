@@ -10,7 +10,7 @@ defineExpose({ videoEl })
   <div class="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm overflow-hidden">
     <div class="p-4">
 
-      <!---Video preview container-->
+      
       <div class="relative mb-4 bg-gray-100 dark:bg-black rounded-lg overflow-hidden">
         <video
           ref="videoEl"
@@ -20,7 +20,7 @@ defineExpose({ videoEl })
           muted
         />
       </div>
-      <!--- Capture photo button -->
+      
       <button
         @click="$emit('capture')"
         class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-5 py-3 rounded-lg transition-colors duration-150 flex items-center justify-center gap-2"

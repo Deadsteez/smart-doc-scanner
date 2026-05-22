@@ -1,14 +1,21 @@
 import type { DocumentRecord } from '~/services/db'
 
-export function exportDocumentsToCSV(docs: DocumentRecord[]) {
-  if (!docs.length) return
+export function exportDocumentsToCSV(docs: DocumentRecord[]):boolean {
+  if (!docs.length) return false
 
-  const headers = ['ID','Created At','Category','Confidence','Vendor','Date','Total', 'Tax','Receipt/Invoice Number','Payment Method','Items Count' ]
+  const headers = ['ID','Created At','Category','Confidence','Vendor','Date','Total', 'Tax','Receipt/Invoice Number','Payment Method','Items Count','Items Detail','Sync Status' ]
 
-  const rows = docs.map(doc => [
+  const rows = docs.map(doc => {
+
+    const itemsDetail =doc.extracted?.items?.map(i => `${i.description} ($${i.amount})`).join('; ') ?? ''
+
+    const confidence = doc.category?.confidence? Math.round(doc.category.confidence * 100) + '%': ''
+
+    return [
     doc.id ?? '',
     new Date(doc.createdAt).toLocaleString(),
     doc.category?.type ?? '',
+    doc.category?.nlpLabel??'',
     doc.category?.confidence ? Math.round(doc.category.confidence * 100) + '%' : '',
     doc.extracted?.vendor ?? '',
     doc.extracted?.date ?? '',
@@ -16,10 +23,13 @@ export function exportDocumentsToCSV(docs: DocumentRecord[]) {
     doc.extracted?.tax ?? '',
     doc.extracted?.receiptNumber ?? '',
     doc.extracted?.paymentMethod ?? '',
-    doc.extracted?.items?.length ?? 0
-  ])
+    doc.extracted?.items?.length ?? 0,
+    itemsDetail,
+    doc.synced?'Synced':'Pending',
+    ]
+})
 
-  const csv =[headers, ...rows].map
+  const csv ='\uFEFF' +[headers, ...rows].map
   (row =>row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(','))
   .join('\n')
 
@@ -36,5 +46,7 @@ export function exportDocumentsToCSV(docs: DocumentRecord[]) {
   link.click()
   document.body.removeChild(link)
 
-  URL.revokeObjectURL(url)
+  setTimeout(()=>URL.revokeObjectURL(url),1000)
+
+  return true
 }

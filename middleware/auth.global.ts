@@ -4,15 +4,25 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (import.meta.server) return
 
   const supabase = getSupabase()
-  const { data } = await supabase.auth.getSession()
 
-  const publicRoutes = ['/login', '/register']
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!data.session && !publicRoutes.includes(to.path)) {
+  const unauthenticatedAllowed = ['/login', '/register', '/invite', '/eval']
+  const guestOnlyRoutes = ['/login', '/register']
+
+  if (!session && !unauthenticatedAllowed.includes(to.path)) {
     return navigateTo('/login')
   }
 
-  if (data.session && publicRoutes.includes(to.path)) {
+  if (session && guestOnlyRoutes.includes(to.path)) {
     return navigateTo('/scan')
+  }
+
+  if (session) {
+    supabase.auth.getUser().catch(() => {
+      // Token invalid or revoked — sign out and redirect
+      supabase.auth.signOut()
+      navigateTo('/login')
+    })
   }
 })

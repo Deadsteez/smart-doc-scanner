@@ -10,6 +10,9 @@ if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 }
 
+const VALID_FORMATS = ['png', 'jpeg', 'webp']
+const MAX_CANVAS_DIM = 4096
+
 self.onmessage = async (e) => {
   const { pdfData, options = {} } = e.data
 
@@ -24,8 +27,11 @@ self.onmessage = async (e) => {
     const {
       maxPages = 10,
       scale = 2.0,
-      outputFormat = 'png'
     } = options
+
+    const outputFormat = VALID_FORMATS.includes(options.outputFormat)
+      ? options.outputFormat
+      : 'png'
 
     self.postMessage({
       type: 'progress',
@@ -54,13 +60,24 @@ self.onmessage = async (e) => {
 
     const pages = []
 
+    try
+    {
     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
       try {
         const page = await pdf.getPage(pageNum)
         const viewport = page.getViewport({ scale })
 
-        const canvas = new OffscreenCanvas(viewport.width, viewport.height)
-        const context = canvas.getContext('2d')
+       const safeScale = Math.min(
+            scale,
+            MAX_CANVAS_DIM / Math.max(viewport.width, viewport.height)
+          )
+          const safeViewport = page.getViewport({ scale: safeScale })
+ 
+          const canvas = new OffscreenCanvas(safeViewport.width, safeViewport.height)
+          const context = canvas.getContext('2d')
+
+          context.clearRect(0, 0, canvas.width, canvas.height)
+ 
 
         await page.render({
           canvasContext: context,
@@ -77,41 +94,49 @@ self.onmessage = async (e) => {
           reader.readAsDataURL(blob)
         })
 
-        pages.push({
-          pageNumber: pageNum,
-          image: dataUrl,
-          width: viewport.width,
-          height: viewport.height
-        })
-
-        const progress = 0.2 + (pageNum / numPages) * 0.7
+       const pageResult = {
+            pageNumber: pageNum,
+            image: dataUrl,
+            width: safeViewport.width,
+            height: safeViewport.height
+          }
+ 
+          pages.push(pageResult)
         
-        self.postMessage({
-          type: 'progress',
-          progress,
-          status: `Converted page ${pageNum}/${numPages}`,
-          currentPage: pageNum,
-          totalPages: numPages
-        })
-
-        page.cleanup()
+       self.postMessage({ type: 'page', page: pageResult })
+ 
+          const progress = 0.2 + (pageNum / numPages) * 0.75
+          self.postMessage({
+            type: 'progress',
+            progress: parseFloat(progress.toFixed(2)),
+            status: `Converted page ${pageNum}/${numPages}`,
+            currentPage: pageNum,
+            totalPages: numPages
+          })
+ 
+          page.cleanup()
 
       } catch (pageError) {
         console.error(`[PDF Worker] Page ${pageNum} error:`, pageError)
         pages.push({ pageNumber: pageNum, error: pageError.message })
       }
     }
-
+  }
+  finally{
     pdf.destroy()
+  }
+   const successfulPages = pages.filter(p => !p.error).length
+    console.log(`[PDF Worker] Done: ${successfulPages}/${numPages} pages`)
 
-    console.log(`[PDF Worker] Done: ${pages.filter(p => !p.error).length}/${numPages} pages`)
-
+    self.postMessage({ type: 'progress', progress: 1.0, status: 'Done' })
+ 
     self.postMessage({
       type: 'result',
       pages,
       totalPages: numPages,
-      successfulPages: pages.filter(p => !p.error).length
+      successfulPages
     })
+ 
 
   } catch (err) {
     console.error('[PDF Worker] Error:', err)

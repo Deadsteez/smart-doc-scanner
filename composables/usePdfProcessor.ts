@@ -34,11 +34,11 @@ export const usePdfProcessor = () => {
 
   let pdfWorker: Worker | null = null
 
-  const initWorker = () => {
+  const initWorker = (): Worker => {
     if (pdfWorker) return pdfWorker
 
     pdfWorker = new Worker('/workers/pdfWorker.js')
-    
+
     pdfWorker.onerror = (err) => {
       console.error('[PDF Processor] Worker error:', err)
       error.value = 'PDF worker failed to initialize'
@@ -58,8 +58,10 @@ export const usePdfProcessor = () => {
         return
       }
 
-      const worker = initWorker()
-      if (!worker) {
+      let worker: Worker
+      try {
+        worker = initWorker()
+      } catch (err) {
         reject(new Error('Failed to initialize PDF worker'))
         return
       }
@@ -76,7 +78,7 @@ export const usePdfProcessor = () => {
             progress: msg.progress,
             status: msg.status,
             currentPage: msg.currentPage,
-            totalPages: msg.totalPages
+            totalPages: msg.totalPages,
           }
           return
         }
@@ -88,7 +90,7 @@ export const usePdfProcessor = () => {
           resolve({
             pages: msg.pages,
             totalPages: msg.totalPages,
-            successfulPages: msg.successfulPages
+            successfulPages: msg.successfulPages,
           })
           return
         }
@@ -104,24 +106,20 @@ export const usePdfProcessor = () => {
 
       worker.addEventListener('message', handleMessage)
 
-      const plainOptions = JSON.parse(JSON.stringify(options))
-      const pdfData = data.slice(0)
-      worker.postMessage({ pdfData, options: plainOptions })
+  
+      worker.postMessage({ pdfData: data, options }, [data])
     })
   }
 
-  const isPdfFile = (file: File): boolean => {
-    return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
-  }
+  const isPdfFile = (file: File): boolean =>
+    file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 
-  
   const validatePdfFile = (file: File): { valid: boolean; error?: string } => {
     if (!isPdfFile(file)) {
       return { valid: false, error: 'File is not a PDF' }
     }
 
-    // Check file size (limit to 50MB)
-    const maxSize = 50 * 1024 * 1024 
+    const maxSize = 50 * 1024 * 1024   
     if (file.size > maxSize) {
       return { valid: false, error: 'PDF file too large (max 50MB)' }
     }
@@ -129,32 +127,35 @@ export const usePdfProcessor = () => {
     return { valid: true }
   }
 
-  // Get PDF info without processing
+ 
   const getPdfInfo = async (file: File): Promise<{ numPages: number; fileSize: number }> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
-      
+
       reader.onload = async () => {
         try {
-          const arrayBuffer = reader.result as ArrayBuffer
-          
-          const estimatedPages = Math.max(1, Math.floor(file.size / (100 * 1024))) // ~100KB per page
-          
-          resolve({
-            numPages: estimatedPages,
-            fileSize: file.size
-          })
+          const buffer = reader.result as ArrayBuffer
+          const bytes = new Uint8Array(buffer)
+          const text = new TextDecoder('latin1').decode(bytes)
+          const match = text.match(/\/Count\s+(\d+)/)
+          const numPages = match?.[1] ? parseInt(match[1], 10) : null
+
+          if (!numPages || numPages < 1) {
+            reject(new Error('Could not determine page count from PDF'))
+            return
+          }
+
+          resolve({ numPages, fileSize: file.size })
         } catch (err) {
           reject(err)
         }
       }
-      
+
       reader.onerror = () => reject(new Error('Failed to read PDF file'))
       reader.readAsArrayBuffer(file)
     })
   }
 
-  // Cleanup
   const cleanup = () => {
     if (pdfWorker) {
       pdfWorker.terminate()
@@ -164,6 +165,7 @@ export const usePdfProcessor = () => {
     progress.value = null
     error.value = null
   }
+
   onBeforeUnmount(() => {
     cleanup()
   })
@@ -176,6 +178,6 @@ export const usePdfProcessor = () => {
     isPdfFile,
     validatePdfFile,
     getPdfInfo,
-    cleanup
+    cleanup,
   }
 }

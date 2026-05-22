@@ -4,32 +4,30 @@ let nerPipeline = null
 let classifierPipeline = null
 let initPromise = null
 
-// Initialize the worker
 async function initializeWorker() {
   try {
     console.log('[NLP Worker] Attempting to import transformers...')
     const { pipeline, env } = await import('@xenova/transformers')
     console.log('[NLP Worker] Transformers imported successfully')
-    
-    // Configure local + remote model resolution
+
     env.localModelPath = '/models/'
     env.cacheDir = '/models/'
-    env.allowRemoteModels = true 
-    env.allowLocalModels = true
+    env.allowRemoteModels = true
+    env.allowLocalModels = false
 
     console.log('[NLP Worker] Model path:', env.localModelPath)
 
     const MODEL_OPTIONS = { quantized: true }
 
-    // Load pipelines
     await loadPipelines(pipeline, MODEL_OPTIONS)
-    
+
   } catch (importError) {
     console.error('[NLP Worker] Failed to import transformers:', importError)
     postMessage({
       type: 'error',
       error: 'Failed to load NLP dependencies: ' + String(importError)
     })
+    throw importError
   }
 }
 
@@ -47,10 +45,11 @@ async function loadPipelines(pipeline, MODEL_OPTIONS) {
       aggregation_strategy: 'simple',
       progress_callback: (p) => {
         if (p.status === 'downloading') {
+          const scaled = 0.1 + ((p.progress ?? 0) / 100) * 0.25
           postMessage({
             type: 'progress',
             stage: 'ner',
-            progress: 0.2,
+            progress: parseFloat(scaled.toFixed(2)),
             status: `Downloading NER... ${p.progress?.toFixed(0) ?? ''}%`
           })
         } else if (p.status === 'loading') {
@@ -78,10 +77,11 @@ async function loadPipelines(pipeline, MODEL_OPTIONS) {
         ...MODEL_OPTIONS,
         progress_callback: (p) => {
           if (p.status === 'downloading') {
+            const scaled = 0.5 + ((p.progress ?? 0) / 100) * 0.35
             postMessage({
               type: 'progress',
               stage: 'classifier',
-              progress: 0.7,
+              progress: parseFloat(scaled.toFixed(2)),
               status: `Downloading classifier... ${p.progress?.toFixed(0) ?? ''}%`
             })
           } else if (p.status === 'loading') {
@@ -112,7 +112,7 @@ async function loadPipelines(pipeline, MODEL_OPTIONS) {
   }
 }
 
-// Start initialization
+// Preload models when worker starts to reduce latency after OCR completes
 initPromise = initializeWorker()
 
 // Handle messages from main thread
@@ -126,11 +126,16 @@ self.onmessage = async (e) => {
 
   try {
     await initPromise
+  } catch {
+    postMessage({ type: 'error', error: 'Worker failed to initialize — reload and try again' })
+    return
+  }
 
-    if (!nerPipeline || !classifierPipeline) {
-      throw new Error('Pipelines not initialized after init')
-    }
+  if (!nerPipeline || !classifierPipeline) {
+    throw new Error('Pipelines not initialized after init')
+  }
 
+  try {
     postMessage({
       type: 'progress',
       stage: 'ner',
@@ -236,6 +241,19 @@ function fallbackTax(text) {
 }
 
 function fallbackReceiptNumber(text) {
+  // UTR / RRN — 12-digit bank reference
+  const utr = text.match(/\b(?:UTR|RRN)\s*[:\-]?\s*([0-9]{12})\b/i)?.[1]
+  if (utr) return utr
+
+  // GST invoice number
+  const gst = text.match(/\b([0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z])\b/)?.[1]
+  if (gst) return gst
+
+  // E-way bill — 12 digits preceded by label
+  const eway = text.match(/\be[-\s]?way\s*bill\s*(?:no|number)?[:\s]*([0-9]{12})\b/i)?.[1]
+  if (eway) return eway
+
+  // Generic receipt/invoice/ref number
   return text.match(
     /\b(?:receipt|invoice|order|ref|transaction|txn|trans)\s*(?:no\.?|#|number|id)?[:\s]*([A-Z0-9\-]{3,20})/i
   )?.[1]
@@ -309,7 +327,7 @@ function combineClassification(nlpResult, cvFeatures) {
   const confidence = total > 0 ? topScore / total : 0
 
   return {
-    type: topLabel === 'bank_statement' ? 'other' : topLabel,
+    type: topLabel ,
     nlpLabel: topLabel,
     confidence,
     scores: blended

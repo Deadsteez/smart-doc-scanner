@@ -41,17 +41,17 @@ async function main() {
 
     try {
       await pipeline(task, model, {
-      progress_callback: (progress) => {
-        if (progress.status === 'downloading') {
-          const pct = progress.progress != null ? progress.progress.toFixed(1) + '%' : '...'
-          process.stdout.write(`\r   ${p.file ?? ''} — ${pct}        `)
-        }
+        progress_callback: (progress) => {
+          if (progress.status === 'downloading') {
+            const pct = progress.progress != null ? progress.progress.toFixed(1) + '%' : '...'
+            process.stdout.write(`\r   ${progress.file ?? ''} — ${pct}        `)
+          }
 
-        if (p.status === 'done') {
-          process.stdout.write(`\r   ${p.file ?? 'file'} done          \n`)
+          if (progress.status === 'done') {
+            process.stdout.write(`\r   ${progress.file ?? 'file'} done          \n`)
+          }
         }
-    }
-    })
+      })
 
     console.log(` ${label} ready\n`)
     } 
