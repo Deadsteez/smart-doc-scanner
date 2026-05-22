@@ -10,10 +10,30 @@ export interface ExtractedFields {
   vendor?: string
   date?: string
   total?: string
+  currency?: string          // detected currency code: INR, MYR, USD, EUR, GBP, etc.
   tax?: string
   receiptNumber?: string
   paymentMethod?: string
   items?: LineItem[]
+  // Category-specific extras (stored flat for DB simplicity)
+  invoiceNumber?: string
+  gstin?: string
+  poNumber?: string
+  dueDate?: string
+  accountNumber?: string
+  openingBalance?: string
+  closingBalance?: string
+  ifsc?: string
+  statementPeriod?: string
+  consumerNumber?: string
+  billingPeriod?: string
+  unitsConsumed?: string
+  pan?: string
+  assessmentYear?: string
+  taxAmount?: string
+  utrNumber?: string
+  bankReference?: string
+  transferMode?: string
 }
 
 export interface CategoryScores {
@@ -30,6 +50,7 @@ export interface CategoryScores {
 export interface DocumentCategory {
   type: 'invoice' | 'receipt' | 'bank_statement' | 'payment_slip' | 'utility_bill' | 'tax_document' | 'contract' | 'other'
   nlpLabel?: string
+  patternType?: string       // result from fast pattern classifier
   confidence: number
   scores: CategoryScores
 }
@@ -46,6 +67,10 @@ export interface DocumentRecord {
   extracted: ExtractedFields
   category: DocumentCategory
   synced: boolean
+  // ── Semantic AI fields ────────────────────────────────────────────────────
+  embedding?: number[]           // 384-dim MiniLM vector (L2-normalised)
+  expenseCategory?: string       // 'food' | 'fuel' | 'transport' | 'utilities' | etc.
+  semanticTags?: string[]        // ['gst-invoice', 'recurring', 'subscription', ...]
 }
 
 class DocumentDB extends Dexie {
@@ -55,6 +80,12 @@ class DocumentDB extends Dexie {
     super('SmartDocScannerDB')
     this.version(4).stores({
       documents: '++id, createdAt, synced, supabaseId, userId, workspaceId'
+    })
+    this.version(5).stores({
+      documents: '++id, createdAt, synced, supabaseId, userId, workspaceId'
+    })
+    this.version(6).stores({
+      documents: '++id, createdAt, synced, supabaseId, userId, workspaceId, expenseCategory'
     })
   }
 }
