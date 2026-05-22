@@ -220,25 +220,43 @@ function scoreAmountBandText(text, confidence) {
   return score
 }
 
+function computeSimilarity(s1, s2) {
+  const set1 = new Set(s1.toLowerCase().split(/\s+/).filter(w => w.length > 2))
+  const set2 = new Set(s2.toLowerCase().split(/\s+/).filter(w => w.length > 2))
+  if (set1.size === 0 && set2.size === 0) return s1.toLowerCase() === s2.toLowerCase() ? 1 : 0
+  const intersection = new Set([...set1].filter(x => set2.has(x)))
+  const union = new Set([...set1, ...set2])
+  return intersection.size / (union.size || 1)
+}
+
 function mergeTexts(texts) {
-  const seen   = new Set()
   const merged = []
+  const AD_KEYWORDS = /(?:cashback|win\s+up\s+to|scratch\s+card|pay\s+via|powered\s+by|download\s+app|ad\b|sponsor)/i
 
   for (const text of texts) {
     for (const line of normaliseOcrText(text).split('\n')) {
       const trimmed = line.trim()
       if (!trimmed) continue
 
+      // Filter ads immediately
+      if (AD_KEYWORDS.test(trimmed)) continue
+
       // Quality gate — at least 35% of chars must be "useful"
       const useful = (trimmed.match(
-        // Latin alnum + common doc chars + Devanagari + Arabic/Urdu
         /[a-zA-Z0-9$₹.,:#\-\/\u0900-\u097F\u0600-\u06FF]/g
       ) ?? []).length
       if (useful / trimmed.length < 0.35) continue
 
-      const key = trimmed.toLowerCase()
-      if (seen.has(key)) continue
-      seen.add(key)
+      // Deduplication based on similarity (Jaccard > 0.65 or exact match)
+      const isDuplicate = merged.some(m => {
+        if (m.toLowerCase() === trimmed.toLowerCase()) return true
+        if (trimmed.length > 10 && m.length > 10) {
+          return computeSimilarity(m, trimmed) > 0.65
+        }
+        return false
+      })
+
+      if (isDuplicate) continue
       merged.push(trimmed)
     }
   }
@@ -294,6 +312,13 @@ function getDocumentTypeCrops(docType) {
         { x: 0.0, y: 0.78, width: 1.0, height: 0.22, scale: 3.0, label: 'stmt-footer' },
       ]
 
+    case 'utility_bill':
+      return [
+        { x: 0.0,  y: 0.0,  width: 1.0,  height: 0.30, scale: 3.0, label: 'util-header' },
+        { x: 0.40, y: 0.0,  width: 0.60, height: 0.35, scale: 3.5, label: 'util-details' },
+        { x: 0.0,  y: 0.30, width: 1.0,  height: 0.50, scale: 2.5, label: 'util-body' },
+      ]
+
     default:
       return [
         { x: 0.0, y: 0.0,  width: 1.0, height: 0.55, scale: 2.6, label: 'top-generic'    },
@@ -328,6 +353,12 @@ function getAmountBandCrops(docType) {
         { x: 0.60, y: 0.18, width: 0.40, height: 0.65, scale: 3.5, label: 'stmt-amount-col'   },
         { x: 0.55, y: 0.75, width: 0.45, height: 0.12, scale: 5.0, label: 'stmt-amount-foot'  },
         { x: 0.50, y: 0.80, width: 0.50, height: 0.12, scale: 5.0, label: 'stmt-amount-foot2' },
+      ]
+
+    case 'utility_bill':
+      return [
+        { x: 0.30, y: 0.20, width: 0.70, height: 0.40, scale: 4.0, label: 'util-amount-top' },
+        { x: 0.20, y: 0.60, width: 0.80, height: 0.25, scale: 5.0, label: 'util-amount-bot' },
       ]
 
     default:

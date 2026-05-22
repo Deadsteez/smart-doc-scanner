@@ -53,8 +53,35 @@ export function extractDate(text: string): string | undefined {
 const TOTAL_KEYWORDS =
   /(?:\b(?:grand\s*total|total\s*amount|amount\s*due|net\s*amount|amount\s*payable|payable|balance\s*due|total\s*payable|total\s*due|sub\s*total|subtotal|total)\b|कुल\s*योग|कुल\s*राशि|योग|देय\s*राशि|निवळ\s*रक्कम|एकूण\s*रक्कम|एकूण|कुल)/i
 
-export function extractTotal(text: string, lines: string[]): { total: string | undefined; currency: string | undefined } {
+export function extractTotal(text: string, lines: string[], docType?: string): { total: string | undefined; currency: string | undefined } {
   const ccy = detectCurrency(text)
+
+  // 0. Clean lines to exclude ad banners
+  const AD_KEYWORDS = /(?:cashback|win\s+up\s+to|scratch\s+card|pay\s+via|powered\s+by|download\s+app|ad\b|sponsor)/i
+  const cleanLines = lines.filter((l, i) => {
+    if (AD_KEYWORDS.test(l)) return false
+    // Also skip amounts immediately following an ad banner (highly likely to be ad amount)
+    if (i > 0 && AD_KEYWORDS.test(lines[i - 1])) return false
+    return true
+  })
+  
+  // Strategy 0: Semantic Utility Bill logic
+  if (docType === 'utility_bill') {
+    const utilityMatch = text.match(
+      /(?:\b(?:bill\s*amount|payable\s*amount|net\s*bill|current\s*bill|amount\s*payable)\b)[^\d\n]{0,20}(?:RM|MYR|₹|Rs\.?|INR|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i
+    )
+    if (utilityMatch?.[1]) return { total: utilityMatch[1], currency: ccy }
+    
+    // Fallback block if keyword is on previous line
+    for (let i = 0; i < cleanLines.length - 1; i++) {
+      const currentLine = cleanLines[i]
+      const nextLine = cleanLines[i + 1]
+      if (currentLine && nextLine && /\b(?:bill\s*amount|payable\s*amount|net\s*bill|current\s*bill|amount\s*payable)\b/i.test(currentLine)) {
+        const amtMatch = nextLine.match(/(?:RM|MYR|₹|Rs\.?|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i)
+        if (amtMatch?.[1]) return { total: amtMatch[1], currency: ccy }
+      }
+    }
+  }
 
   // Strategy 1: Keyword + amount on same line
   const kwMatch = text.match(
@@ -63,9 +90,9 @@ export function extractTotal(text: string, lines: string[]): { total: string | u
   if (kwMatch?.[1]) return { total: kwMatch[1], currency: ccy }
 
   // Strategy 2: Keyword on one line, amount on next
-  for (let i = 0; i < lines.length - 1; i++) {
-    const currentLine = lines[i]
-    const nextLine = lines[i + 1]
+  for (let i = 0; i < cleanLines.length - 1; i++) {
+    const currentLine = cleanLines[i]
+    const nextLine = cleanLines[i + 1]
     if (currentLine && nextLine && TOTAL_KEYWORDS.test(currentLine)) {
       const amtMatch = nextLine.match(
         /(?:RM|MYR|₹|Rs\.?|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i
@@ -79,8 +106,8 @@ export function extractTotal(text: string, lines: string[]): { total: string | u
   if (bareTotal?.[1]) return { total: bareTotal[1], currency: ccy }
 
   // Strategy 4: Largest currency-prefixed amount in bottom 40% of text
-  const footerStart = Math.floor(lines.length * 0.60)
-  const footerText  = lines.slice(footerStart).join('\n')
+  const footerStart = Math.floor(cleanLines.length * 0.60)
+  const footerText  = cleanLines.slice(footerStart).join('\n')
   const ccyAmounts  = [...footerText.matchAll(
     /(?:RM|MYR|₹|Rs\.?|INR|\$|€|£)\s*([\d,]+\.?\d{0,2})/gi
   )]
@@ -98,7 +125,8 @@ export function extractTotal(text: string, lines: string[]): { total: string | u
   }
 
   // Strategy 5: Last standalone decimal in document
-  const allAmounts = [...text.matchAll(/\b(\d{1,6}(?:[,\s]\d{2,3})*\.\d{2})\b/g)]
+  const cleanText = cleanLines.join('\n')
+  const allAmounts = [...cleanText.matchAll(/\b(\d{1,6}(?:[,\s]\d{2,3})*\.\d{2})\b/g)]
   if (allAmounts.length > 0) {
     const lastMatch = allAmounts[allAmounts.length - 1]
     if (lastMatch && lastMatch[1]) {
@@ -216,7 +244,7 @@ export function extractFields(text: string, docType?: string): ExtractedFields {
 
   const vendor         = extractVendor(lines)
   const date           = extractDate(text)
-  const { total, currency } = extractTotal(text, lines)
+  const { total, currency } = extractTotal(text, lines, docType)
   const tax            = extractTax(text)
   const receiptNumber  = extractReferenceNumber(text)
   const paymentMethod  = extractPaymentMethod(text)

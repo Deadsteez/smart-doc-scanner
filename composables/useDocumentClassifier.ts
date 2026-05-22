@@ -99,10 +99,14 @@ const utilityBillPatterns = [
   { pattern: /\b(water|gas|telecom|telephone|mobile)\s*bill\b/i,       score: 6 },
   { pattern: /\butility\s*bill\b/i,                                     score: 5 },
   { pattern: /\belectricity\s*(board|supply|authority)\b/i,            score: 4 },
+  { pattern: /\b(msedcl|mahavitaran|bescom|mgl|iggl)\b/i,               score: 6 },
+  { pattern: /\bmaharashtra\s*state\s*electricity\b/i,                 score: 6 },
   { pattern: /\b(meter|consumer)\s*(number|id|no\.?)\b/i,              score: 3 },
   { pattern: /\b(units|units\s*consumed|kWh)\b/i,                      score: 3 },
   { pattern: /\b(due\s*date|payment\s*due\s*on)\b/i,                   score: 2 },
   { pattern: /\b(previous|current)\s*reading\b/i,                      score: 3 },
+  { pattern: /\b(bill\s*amount|payable\s*amount|net\s*bill)\b/i,       score: 3 },
+  { pattern: /\btotal\s*amount\s*payable\b/i,                           score: 4 },
   { pattern: /\brecurring\s*deposit|monthly\s*(charge|fee)\b/i,        score: 2 },
   { pattern: /\b(fixed|variable)\s*charge\b/i,                         score: 2 },
   { pattern: /\b(late\s*fee|penalty|surcharge)\b/i,                    score: 2 },
@@ -271,8 +275,8 @@ function applyOverrides(
 
   
   if (
-    (winnerType === 'receipt' || winnerType === 'other') &&
-    /(electricity|power|water|gas|telecom)\s*bill|meter\s*number/i.test(text) &&
+    (winnerType === 'receipt' || winnerType === 'other' || winnerType === 'invoice') &&
+    /(electricity|power|water|gas|telecom)\s*bill|meter\s*number|msedcl|mahavitaran/i.test(text) &&
     scores.utility_bill >= 4
   ) {
     return 'utility_bill'
