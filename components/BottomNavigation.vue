@@ -5,6 +5,7 @@ const navItems = [
   { label: 'Home', icon: 'home', to: '/' },
   { label: 'Scan', icon: 'scan', to: '/scan', isCta: true },
   { label: 'Documents', icon: 'docs', to: '/dashboard' },
+  { label: 'Workspace', icon: 'workspace', to: '/workspace' },
   { label: 'Profile', icon: 'profile', to: '/profile' },
 ]
 
@@ -60,6 +61,10 @@ function isActive(to) {
             <!-- Profile icon -->
             <svg v-else-if="item.icon === 'profile'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
               <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+            <!-- Workspace icon -->
+            <svg v-else-if="item.icon === 'workspace'" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.8">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
             </svg>
             <span class="text-[10px] font-medium">{{ item.label }}</span>
           </NuxtLink>

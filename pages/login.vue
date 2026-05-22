@@ -9,6 +9,7 @@ const password = ref('')
 const errorMsg = ref('')
 const loading = ref(false)
 const { login } = useAuth()
+const route = useRoute()
 
 const handleLogin = async () => {
   errorMsg.value = ''
@@ -21,7 +22,8 @@ const handleLogin = async () => {
   if (error) {
     errorMsg.value = error.message
   } else {
-    navigateTo('/scan')
+    const redirectUrl = route.query.redirect || '/scan'
+    navigateTo(redirectUrl)
   }
 }
 </script>

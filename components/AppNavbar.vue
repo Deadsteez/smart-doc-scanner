@@ -3,6 +3,10 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useAuth } from '~/composables/useAuth'
 import { useTheme } from '~/composables/useTheme'
 import { onClickOutside } from '@vueuse/core'
+import { useNotificationStore } from '~/stores/notificationStore'
+import NotificationBell from '~/components/NotificationBell.vue'
+
+const notificationStore = useNotificationStore()
 
 const { user, logout } = useAuth()
 const { isDark, toggle: toggleTheme } = useTheme()
@@ -95,11 +99,23 @@ function closeMenuOnOutside() {
             >
               Scan
             </NuxtLink>
+            <NuxtLink
+              to="/workspace"
+              class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+              :class="$route.path.startsWith('/workspace')
+                ? 'text-text-primary bg-bg-tertiary/60'
+                : 'text-text-muted hover:text-text-secondary hover:bg-bg-tertiary/30'"
+            >
+              Workspace
+            </NuxtLink>
           </div>
         </div>
 
         <!-- Right: Actions -->
         <div class="flex items-center gap-3">
+          <!-- Notification Bell -->
+          <NotificationBell />
+
           <!-- Scan CTA button -->
           <NuxtLink
             to="/scan"

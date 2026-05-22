@@ -31,9 +31,14 @@ export default defineNuxtConfig({
   },
 
  runtimeConfig: {
+    // Server-side only (never exposed to client)
+    inviteSecret: process.env.INVITE_SECRET ?? '',
+    resendApiKey: process.env.RESEND_API_KEY ?? '',
+    supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     public: {
       supabaseUrl: process.env.NUXT_PUBLIC_SUPABASE_URL ?? '',
-     supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      supabaseAnonKey: process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
     }
   },
 

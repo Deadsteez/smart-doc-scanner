@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { db } from '~/services/db'
 import type { DocumentRecord } from '~/services/db'
 import { getSupabase } from '~/services/supabaseClient'
+import { useWorkspaceStore } from '~/stores/workspaceStore'
 
 export const useDocumentStore = defineStore('documents', () => {
   const documents = ref<DocumentRecord[]>([])
@@ -42,7 +43,6 @@ export const useDocumentStore = defineStore('documents', () => {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', userId)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -59,6 +59,7 @@ export const useDocumentStore = defineStore('documents', () => {
           await db.documents.add({
             supabaseId: row.id,
             userId: row.user_id,
+            workspaceId: row.workspace_id ?? undefined,
             createdAt: row.created_at,
             image: row.image,
             ocrText: row.ocr_text ?? '',
@@ -88,12 +89,15 @@ export const useDocumentStore = defineStore('documents', () => {
       console.error('[Store] Pull failed:', err)
     }
   }
-  async function add(doc: Omit<DocumentRecord, 'id' | 'supabaseId'>) {
+  async function add(doc: Omit<DocumentRecord, 'id' | 'supabaseId' | 'workspaceId'>) {
     const userId = await getCurrentUserId()
+    const workspaceStore = useWorkspaceStore()
+    const activeWorkspaceId = workspaceStore.currentWorkspace?.id
 
     const localId = await db.documents.add({
       ...doc,
       userId: userId ?? undefined,
+      workspaceId: activeWorkspaceId ?? undefined,
       synced: false,
     })
 
@@ -118,6 +122,7 @@ export const useDocumentStore = defineStore('documents', () => {
         .from('documents')
         .insert({
           user_id: userId,
+          workspace_id: record.workspaceId ?? null,
           created_at: record.createdAt,
           image: record.image,
           ocr_text: record.ocrText,

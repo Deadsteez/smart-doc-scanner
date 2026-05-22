@@ -10,6 +10,7 @@ const message = ref('')
 const isSuccess = ref(false)
 const loading = ref(false)
 const { register } = useAuth()
+const route = useRoute()
 
 const handleRegister = async () => {
   message.value = ''
@@ -92,7 +93,7 @@ const handleRegister = async () => {
       <!-- Login link -->
       <p class="text-text-muted text-sm mt-5 text-center">
         Already have an account?
-        <NuxtLink to="/login" class="text-accent-primary hover:underline">Sign in</NuxtLink>
+        <NuxtLink :to="`/login${route.query.redirect ? '?redirect=' + route.query.redirect : ''}`" class="text-accent-primary hover:underline">Sign in</NuxtLink>
       </p>
 
     </div>

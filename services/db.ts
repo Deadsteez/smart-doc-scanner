@@ -20,6 +20,7 @@ export interface DocumentRecord {
   id?: number
   supabaseId?: string
   userId?: string
+  workspaceId?: string
   createdAt: number
   image: string
   ocrText: string
@@ -44,9 +45,9 @@ class DocumentDB extends Dexie {
 
   constructor() {
     super('SmartDocScannerDB')
-    this.version(3).stores({
+    this.version(4).stores({
       //Indexed DB schema
-      documents: '++id, createdAt, synced, supabaseId, userId'
+      documents: '++id, createdAt, synced, supabaseId, userId, workspaceId'
     })
   }
 }
