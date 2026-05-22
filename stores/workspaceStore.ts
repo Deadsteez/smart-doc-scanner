@@ -137,11 +137,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     if (err) { error.value = err.message; return }
     currentWorkspace.value.name = name
-    const wsId = currentWorkspace.value?.id
-   const idx = workspaces.value.findIndex(w => w.id === wsId)
-    if (idx !== -1) workspaces.value[idx].name = name
+   const wsId = currentWorkspace.value?.id
+const idx = workspaces.value.findIndex(w => w.id === wsId)
+if (idx !== -1) {
+  const ws = workspaces.value[idx]
+  if (ws) ws.name = name
+}
   }
-
   async function deleteWorkspace(workspaceId: string): Promise<boolean> {
     loading.value = true
     try {
@@ -252,10 +254,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
     const idx = approvals.value.findIndex(a => a.id === payload.approval_id)
     if (idx !== -1) {
-      approvals.value[idx].status = payload.status
-      approvals.value[idx].reviewed_by = _currentUserId.value
-      approvals.value[idx].notes = payload.notes ?? null
-    }
+  const approval = approvals.value[idx]
+  if (approval) {
+    approval.status = payload.status
+    approval.reviewed_by = _currentUserId.value
+    approval.notes = payload.notes ?? null
+  }
+}
     return true
   }
 
@@ -268,11 +273,14 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (err) { error.value = err.message; return false }
 
     const idx = approvals.value.findIndex(a => a.id === approvalId)
-    if (idx !== -1) {
-      approvals.value[idx].status = 'pending'
-      approvals.value[idx].reviewed_by = null
-      approvals.value[idx].notes = null
-    }
+  if (idx !== -1) {
+  const approval = approvals.value[idx]
+  if (approval) {
+    approval.status = 'pending'
+    approval.reviewed_by = null
+    approval.notes = null
+  }
+}
     return true
   }
 
