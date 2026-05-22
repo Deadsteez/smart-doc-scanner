@@ -339,6 +339,10 @@ function clearFilters() {
             :style="{ color: expenseCategoryBadge(doc).color, borderColor: expenseCategoryBadge(doc).color + '40', background: expenseCategoryBadge(doc).color + '12' }">
             {{ expenseCategoryBadge(doc).emoji }} {{ expenseCategoryBadge(doc).label }}
           </span>
+          <span v-if="doc.extracted?.semanticStatus"
+            class="text-[10px] px-2 py-0.5 rounded-full border font-medium flex items-center gap-1 bg-sky-500/10 text-sky-400 border-sky-500/30 capitalize">
+            {{ doc.extracted.semanticStatus }}
+          </span>
           <span v-for="tag in (doc.semanticTags ?? []).slice(0, 2)" :key="tag"
             class="text-[10px] px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-muted border border-slate-1">
             {{ tag }}

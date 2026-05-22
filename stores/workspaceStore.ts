@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { getSupabase } from '~/services/supabaseClient'
+import { useNotificationStore } from '~/stores/notificationStore'
 import type {
   Workspace,
   WorkspaceMember,
@@ -19,6 +20,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const approvals = ref<DocumentApproval[]>([])
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const isSubscribed = ref(false)
 
   const currentUserId = computed<string | null>(() => {
   
@@ -79,7 +81,30 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     currentWorkspace.value = ws
     if (ws) {
       await Promise.all([fetchMembers(workspaceId), fetchApprovals(workspaceId)])
+      setupRealtimeSubscription(workspaceId)
     }
+  }
+
+  function setupRealtimeSubscription(workspaceId: string) {
+    if (isSubscribed.value) return
+    isSubscribed.value = true
+
+    supabase
+      .channel('workspace_changes')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'workspace_members', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
+        // If it's the current user themselves being added, ignore (they just accepted their own invite)
+        if (payload.new.user_id !== _currentUserId.value) {
+          const notifStore = useNotificationStore()
+          notifStore.push({
+            type: 'member_joined',
+            title: 'New Member Joined',
+            message: 'Someone just accepted your invite and joined the workspace.',
+            workspace_id: workspaceId
+          })
+        }
+        fetchMembers(workspaceId)
+      })
+      .subscribe()
   }
 
   async function createWorkspace(payload: CreateWorkspacePayload): Promise<Workspace | null> {

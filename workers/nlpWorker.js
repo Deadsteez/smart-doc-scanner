@@ -120,9 +120,30 @@ self.onmessage = async (e) => {
     // ── 4. Combine: pattern → NLP → CV ────────────────────────────────────
     const category = combineClassification(classResult, patternCategory, cvFeatures)
 
+    // ── 4.5. Secondary Zero-Shot Pass for Semantic Status ─────────────────
+    let semanticStatus = undefined
+    if (['receipt', 'payment_slip', 'bank_statement'].includes(category.type)) {
+      postMessage({ type: 'progress', stage: 'classifier', progress: 0.70, status: 'Analyzing transaction intent...' })
+      const subLabels = ['payment received', 'payment sent', 'refund', 'subscription']
+      const subResult = await classifierPipeline(truncated, subLabels, { multi_label: false })
+      if (subResult.scores[0] > 0.40) {
+        semanticStatus = subResult.labels[0]
+      }
+    } else if (['invoice', 'utility_bill'].includes(category.type)) {
+      postMessage({ type: 'progress', stage: 'classifier', progress: 0.70, status: 'Analyzing document status...' })
+      const subLabels = ['paid', 'due', 'overdue', 'pending']
+      const subResult = await classifierPipeline(truncated, subLabels, { multi_label: false })
+      if (subResult.scores[0] > 0.40) {
+        semanticStatus = subResult.labels[0]
+      }
+    }
+
     // ── 5. Field extraction (category-aware) ──────────────────────────────
     postMessage({ type: 'progress', stage: 'ner', progress: 0.8, status: 'Extracting fields...' })
     const extracted = extractFields(text, entities, category.type)
+    if (semanticStatus) {
+      extracted.semanticStatus = semanticStatus
+    }
 
     postMessage({
       type: 'result',

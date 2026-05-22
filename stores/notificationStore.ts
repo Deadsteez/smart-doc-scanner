@@ -4,11 +4,11 @@ import type { ApprovalStatus } from '~/types/workspace'
 
 export interface AppNotification {
   id: string
-  type: 'approval'
+  type: 'approval' | 'member_joined'
   title: string
   message: string
-  status: ApprovalStatus
-  document_id: string
+  status?: ApprovalStatus
+  document_id?: string
   workspace_id: string
   timestamp: number
   read: boolean

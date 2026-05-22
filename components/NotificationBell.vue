@@ -114,10 +114,12 @@ function formatTime(timestamp: number): string {
                 'bg-success': notif.status === 'approved',
                 'bg-error': notif.status === 'rejected',
                 'bg-warning': notif.status === 'pending',
+                'bg-sky-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]': notif.type === 'member_joined',
               }"
             />
             <div class="flex-1 min-w-0">
-              <p class="text-sm font-medium text-text-primary" :class="statusColors[notif.status]">
+              <p class="text-sm font-medium" 
+                 :class="notif.type === 'member_joined' ? 'text-sky-400' : (statusColors[notif.status ?? ''] || 'text-text-primary')">
                 {{ notif.title }}
               </p>
               <p class="text-xs text-text-muted mt-0.5 line-clamp-2">{{ notif.message }}</p>
