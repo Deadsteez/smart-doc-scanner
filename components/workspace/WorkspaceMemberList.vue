@@ -31,7 +31,7 @@ const roleColors = {
     <div
       v-for="member in workspaceStore.members"
       :key="member.id"
-      class="flex items-center justify-between gap-3 px-4 py-3 bg-bg-secondary rounded-xl border border-slate-1/20 hover:border-slate-1/40 transition-all"
+      class="flex items-center justify-between gap-3 px-4 py-3 bg-bg-secondary rounded-xl hover:shadow-card-hover transition-all"
     >
       <!-- Avatar + info -->
       <div class="flex items-center gap-3 min-w-0">

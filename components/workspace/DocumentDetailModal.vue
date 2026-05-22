@@ -124,10 +124,10 @@ async function handleDeleteDocument() {
           enter-from-class="opacity-0 scale-95 translate-y-2"
           enter-to-class="opacity-100 scale-100 translate-y-0"
         >
-          <div class="w-full max-w-2xl bg-bg-elevated rounded-2xl border border-slate-1/40 shadow-elevated overflow-hidden flex flex-col max-h-[90vh]">
+          <div class="w-full max-w-2xl bg-bg-elevated rounded-2xl        -slate-1/40 shadow-elevated overflow-hidden flex flex-col max-h-[90vh]">
 
             <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-1/20">
+            <div class="flex items-center justify-between px-6 py-4    -b    -slate-1/20">
               <div class="flex items-center gap-3">
                 <h2 class="text-base font-semibold text-text-primary">Document Details</h2>
                 <ApprovalStatusBadge v-if="approval" :status="approval.status" />
@@ -147,14 +147,14 @@ async function handleDeleteDocument() {
             <div class="flex-1 overflow-y-auto p-6 space-y-5">
 
               <!-- Document preview -->
-              <div v-if="documentImage" class="rounded-xl overflow-hidden border border-slate-1/20 bg-bg-primary max-h-56 flex items-center justify-center">
+              <div v-if="documentImage" class="rounded-xl overflow-hidden        -slate-1/20 bg-bg-primary max-h-56 flex items-center justify-center">
                 <img :src="documentImage" class="object-contain max-h-56 w-full" alt="Document preview" />
               </div>
 
               <!-- Extracted fields grid -->
               <div v-if="extractedFields" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <template v-for="(val, key) in extractedFields" :key="key">
-                  <div v-if="val" class="bg-bg-secondary rounded-xl px-4 py-3 border border-slate-1/20">
+                  <div v-if="val" class="bg-bg-secondary rounded-xl px-4 py-3        -slate-1/20">
                     <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1 font-medium">{{ key }}</p>
                     <p class="text-sm text-text-primary font-medium truncate">{{ val }}</p>
                   </div>
@@ -162,13 +162,13 @@ async function handleDeleteDocument() {
               </div>
 
               <!-- OCR text preview -->
-              <div v-if="documentText" class="bg-bg-secondary rounded-xl p-4 border border-slate-1/20">
+              <div v-if="documentText" class="bg-bg-secondary rounded-xl p-4        -slate-1/20">
                 <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 font-medium">Extracted Text</p>
                 <p class="text-xs text-text-secondary whitespace-pre-wrap line-clamp-6">{{ documentText }}</p>
               </div>
 
               <!-- Reviewer notes & Submitter Info -->
-              <div v-if="approval" class="bg-bg-secondary rounded-xl p-4 border border-slate-1/20 space-y-4">
+              <div v-if="approval" class="bg-bg-secondary rounded-xl p-4        -slate-1/20 space-y-4">
                 <div>
                   <p class="text-[10px] text-text-muted uppercase tracking-wider mb-1 font-medium">Submitted By</p>
                   <p class="text-sm text-text-primary flex items-center gap-2">
@@ -180,19 +180,19 @@ async function handleDeleteDocument() {
                 </div>
                 
                 <div v-if="approval.notes">
-                  <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 font-medium border-t border-slate-1/20 pt-3">Reviewer Notes</p>
+                  <p class="text-[10px] text-text-muted uppercase tracking-wider mb-2 font-medium    -t    -slate-1/20 pt-3">Reviewer Notes</p>
                   <p class="text-sm text-text-secondary italic">{{ approval.notes }}</p>
                 </div>
               </div>
 
               <!-- Error message -->
-              <div v-if="actionError" class="bg-error/10 border border-error/20 rounded-xl px-4 py-3 text-sm text-error">
+              <div v-if="actionError" class="bg-error/10        -error/20 rounded-xl px-4 py-3 text-sm text-error">
                 {{ actionError }}
               </div>
             </div>
 
             <!-- Footer actions -->
-            <div class="border-t border-slate-1/20 px-6 py-4 space-y-3">
+            <div class="   -t    -slate-1/20 px-6 py-4 space-y-3">
 
               <!-- Admin: notes + approve/reject (only on pending) -->
               <template v-if="isAdmin && approval?.status === 'pending'">
@@ -200,7 +200,7 @@ async function handleDeleteDocument() {
                   v-model="reviewNotes"
                   placeholder="Add reviewer notes (optional)…"
                   rows="2"
-                  class="w-full px-3 py-2 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted text-sm focus:border-accent-primary focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all resize-none"
+                  class="w-full px-3 py-2 rounded-xl bg-bg-secondary        -slate-1 text-text-primary placeholder-text-muted text-sm focus:   -accent-primary focus:ring-1 focus:ring-accent-primary/20 focus:outline-none transition-all resize-none"
                 />
                 <div class="flex gap-3">
                   <button

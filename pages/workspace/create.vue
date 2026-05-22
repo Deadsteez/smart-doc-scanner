@@ -38,7 +38,7 @@ async function handleCreate() {
       </div>
 
       <!-- Card -->
-      <div class="glass-panel rounded-2xl border border-slate-1/40 p-8 shadow-elevated">
+      <div class="glass-panel rounded-2xl        -slate-1/40 p-8 shadow-elevated">
         <h1 class="text-xl font-semibold text-text-primary mb-1">Create a Workspace</h1>
         <p class="text-text-muted text-sm mb-6">A workspace lets you collaborate and share documents with your team.</p>
 
@@ -52,12 +52,12 @@ async function handleCreate() {
               v-model="name"
               type="text"
               placeholder="e.g. Acme Corp Accounting"
-              class="w-full px-4 py-3 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted text-sm focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+              class="w-full px-4 py-3 rounded-xl bg-bg-secondary        -slate-1 text-text-primary placeholder-text-muted text-sm focus:   -accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
               @keydown.enter="handleCreate"
             />
           </div>
 
-          <p v-if="error" class="text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2">
+          <p v-if="error" class="text-xs text-error bg-error/10        -error/20 rounded-lg px-3 py-2">
             {{ error }}
           </p>
 

@@ -104,7 +104,7 @@ function categoryClass(category: any) {
             leave-from-class="transform scale-100 opacity-100"
             leave-to-class="transform scale-95 opacity-0"
           >
-            <div v-if="isDropdownOpen" class="absolute top-full left-0 mt-3 w-64 bg-bg-elevated border border-slate-1/40 rounded-xl shadow-elevated py-1.5 overflow-hidden">
+            <div v-if="isDropdownOpen" class="absolute top-full left-0 mt-3 w-64 bg-bg-elevated      -slate-1/40 rounded-xl shadow-elevated py-1.5 overflow-hidden">
               <button 
                 v-for="ws in workspaceStore.workspaces" 
                 :key="ws.id"
@@ -143,7 +143,7 @@ function categoryClass(category: any) {
 
         <NuxtLink
           to="/workspace/settings"
-          class="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-bg-tertiary border border-slate-1/30 rounded-xl text-sm text-text-secondary font-medium transition-all"
+          class="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-bg-tertiary      -slate-1/30 rounded-xl text-sm text-text-secondary font-medium transition-all"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
@@ -191,7 +191,7 @@ function categoryClass(category: any) {
         <div
           v-for="doc in workspaceDocuments"
           :key="doc.id"
-          class="bg-bg-secondary border border-slate-1 rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
+          class="bg-bg-secondary      -slate-1 rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
           @click="openDocument((doc as any).supabaseId)"
         >
           <!-- Image preview -->

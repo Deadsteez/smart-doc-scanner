@@ -78,7 +78,7 @@ function copyUrl() {
         type="email"
         id="invite-email-input"
         placeholder="colleague@example.com"
-        class="flex-1 px-4 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary placeholder-text-muted text-sm focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+        class="flex-1 px-4 py-2.5 rounded-xl bg-bg-secondary        -slate-1 text-text-primary placeholder-text-muted text-sm focus:   -accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
         @keydown.enter="handleInvite"
       />
 
@@ -86,7 +86,7 @@ function copyUrl() {
       <select
         v-model="role"
         id="invite-role-select"
-        class="px-3 py-2.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-primary text-sm focus:border-accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+        class="px-3 py-2.5 rounded-xl bg-bg-secondary        -slate-1 text-text-primary text-sm focus:   -accent-primary focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
       >
         <option value="member">Member</option>
         <option value="admin">Admin</option>
@@ -108,15 +108,15 @@ function copyUrl() {
     </div>
 
     <!-- Error -->
-    <p v-if="error" class="text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2">
+    <p v-if="error" class="text-xs text-error bg-error/10        -error/20 rounded-lg px-3 py-2">
       {{ error }}
     </p>
 
     <!-- Fallback invite URL (when Resend not configured) -->
-    <div v-if="successUrl" class="bg-warning/10 border border-warning/20 rounded-xl px-4 py-3">
+    <div v-if="successUrl" class="bg-warning/10        -warning/20 rounded-xl px-4 py-3">
       <p class="text-xs text-warning font-semibold mb-2">✅ Invite link created! Share it manually:</p>
       <div class="flex gap-2">
-        <code class="flex-1 text-xs text-text-secondary bg-bg-secondary rounded-lg px-3 py-2 truncate border border-slate-1/30">
+        <code class="flex-1 text-xs text-text-secondary bg-bg-secondary rounded-lg px-3 py-2 truncate        -slate-1/30">
           {{ successUrl }}
         </code>
         <button
@@ -129,7 +129,7 @@ function copyUrl() {
     </div>
 
     <!-- Success message (when email sent successfully) -->
-    <div v-else-if="successMessage" class="bg-success/10 border border-success/20 rounded-xl px-4 py-3">
+    <div v-else-if="successMessage" class="bg-success/10        -success/20 rounded-xl px-4 py-3">
       <p class="text-sm text-success font-semibold flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
         {{ successMessage }}

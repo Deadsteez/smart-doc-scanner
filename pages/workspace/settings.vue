@@ -56,7 +56,7 @@ async function deleteCurrentWorkspace() {
     </div>
 
     <!-- Workspace name -->
-    <section class="bg-bg-secondary rounded-2xl border border-slate-1/30 p-6 mb-5">
+    <section class="bg-bg-secondary rounded-2xl    -slate-1/30 p-6 mb-5">
       <h2 class="text-sm font-semibold text-text-primary mb-4">General</h2>
       <div class="flex items-center gap-3">
         <div class="flex-1">
@@ -64,7 +64,7 @@ async function deleteCurrentWorkspace() {
           <input
             v-if="editingName"
             v-model="newName"
-            class="w-full px-4 py-2.5 rounded-xl bg-bg-primary border border-accent-primary text-text-primary text-sm focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
+            class="w-full px-4 py-2.5 rounded-xl bg-bg-primary    -accent-primary text-text-primary text-sm focus:ring-2 focus:ring-accent-primary/20 focus:outline-none transition-all"
             @keydown.enter="saveName"
             @keydown.esc="editingName = false"
           />
@@ -91,22 +91,22 @@ async function deleteCurrentWorkspace() {
         </div>
       </div>
 
-      <div class="mt-4 pt-4 border-t border-slate-1/20">
+      <div class="mt-4 pt-4  -t  -slate-1/20">
         <label class="text-xs text-text-muted uppercase tracking-wider font-medium block mb-1">Workspace Slug</label>
-        <code class="text-xs text-text-muted bg-bg-primary px-3 py-1.5 rounded-lg border border-slate-1/20">
+        <code class="text-xs text-text-muted bg-bg-primary px-3 py-1.5 rounded-lg    -slate-1/20">
           {{ workspaceStore.currentWorkspace?.slug ?? '—' }}
         </code>
       </div>
     </section>
 
     <!-- Members -->
-    <section class="bg-bg-secondary rounded-2xl border border-slate-1/30 p-6 mb-5">
+    <section class="bg-bg-secondary rounded-2xl    -slate-1/30 p-6 mb-5">
       <h2 class="text-sm font-semibold text-text-primary mb-4">Members</h2>
       <WorkspaceMemberList />
     </section>
 
     <!-- Invite (Admin only) -->
-    <section v-if="isAdmin" class="bg-bg-secondary rounded-2xl border border-slate-1/30 p-6 mb-5">
+    <section v-if="isAdmin" class="bg-bg-secondary rounded-2xl    -slate-1/30 p-6 mb-5">
       <InviteForm
         :workspace-id="workspaceStore.currentWorkspace?.id ?? ''"
         @invited="onInvited"
@@ -114,7 +114,7 @@ async function deleteCurrentWorkspace() {
     </section>
 
     <!-- Danger Zone (Owner only) -->
-    <section v-if="workspaceStore.currentWorkspace?.owner_id === workspaceStore.currentUserId" class="bg-error/5 rounded-2xl border border-error/20 p-6">
+    <section v-if="workspaceStore.currentWorkspace?.owner_id === workspaceStore.currentUserId" class="bg-error/5 rounded-2xl    -error/20 p-6">
       <h2 class="text-sm font-semibold text-error mb-2">Danger Zone</h2>
       <p class="text-xs text-text-muted mb-4">Deleting this workspace will permanently remove all associated documents, members, and approval requests. This action cannot be undone.</p>
       

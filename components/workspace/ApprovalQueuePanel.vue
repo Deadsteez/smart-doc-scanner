@@ -29,7 +29,7 @@ const emit = defineEmits<{
     <div
       v-for="approval in pendingApprovals"
       :key="approval.id"
-      class="flex items-center justify-between gap-4 bg-bg-secondary rounded-xl border border-warning/20 px-5 py-4 hover:border-warning/40 hover:shadow-[0_2px_12px_rgba(245,158,11,0.1)] transition-all cursor-pointer"
+      class="flex items-center justify-between gap-4 bg-bg-secondary rounded-xl        -warning/20 px-5 py-4 hover:   -warning/40 hover:shadow-[0_2px_12px_rgba(245,158,11,0.1)] transition-all cursor-pointer"
       @click="emit('select', approval.document_id)"
     >
       <div class="flex items-center gap-3 min-w-0">
