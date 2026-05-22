@@ -17,7 +17,7 @@ onMounted(async () => {
   ) ?? null
 })
 
-const extracted   = computed(() => doc.value?.extracted || {})
+const extracted = computed(() => doc.value?.extracted || {})
 const categoryType = computed(() => doc.value?.category?.type ?? 'other')
 const categoryLabel = computed(() => getCategoryLabel(categoryType.value))
 const categoryConfidence = computed(() =>
@@ -29,15 +29,15 @@ const categoryConfidence = computed(() =>
 const patternType = computed(() => doc.value?.category?.patternType)
 
 const categoryClass = computed(() => ({
-  invoice:       'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-  receipt:       'bg-sky-500/15 text-sky-400 border-sky-500/30',
-  bank_statement:'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  payment_slip:  'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  utility_bill:  'bg-violet-500/15 text-violet-400 border-violet-500/30',
-  tax_document:  'bg-rose-500/15 text-rose-400 border-rose-500/30',
-  contract:      'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  other:         'bg-slate-500/15 text-slate-400 border-slate-500/30',
-}[categoryType.value] ?? 'bg-slate-500/15 text-slate-400 border-slate-500/30'))
+  invoice:       'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30',
+  receipt:       'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/30',
+  bank_statement:'bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/50 dark:border-blue-900/30',
+  payment_slip:  'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/50 dark:border-amber-900/30',
+  utility_bill:  'bg-violet-50 dark:bg-violet-950/40 text-violet-600 dark:text-violet-400 border border-violet-200/50 dark:border-violet-900/30',
+  tax_document:  'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-900/30',
+  contract:      'bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 border border-cyan-200/50 dark:border-cyan-900/30',
+  other:         'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50',
+}[categoryType.value] ?? 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50'))
 
 const categoryIcon = computed(() => ({
   invoice:       '🧾',
@@ -49,8 +49,6 @@ const categoryIcon = computed(() => ({
   contract:      '📝',
   other:         '📄',
 }[categoryType.value] ?? '📄'))
-
-// ─── Category-specific extra fields ──────────────────────────────────────────
 
 const coreFields = computed(() => [
   { key: 'vendor',        label: 'Vendor / Company' },
@@ -98,8 +96,6 @@ const categoryFields = computed(() => {
   return (maps[cat] ?? []).filter(f => e[f.key])
 })
 
-// ─── AI confidence breakdown ──────────────────────────────────────────────────
-
 const scoreEntries = computed(() => {
   const scores = doc.value?.category?.scores
   if (!scores) return []
@@ -118,20 +114,27 @@ const scoreEntries = computed(() => {
 const maxScore = computed(() =>
   scoreEntries.value.length > 0 ? scoreEntries.value[0].score : 1
 )
+
+async function deleteDocument() {
+  if (!doc.value) return
+  if (!confirm('Are you sure you want to delete this document? This cannot be undone.')) return
+  await documentStore.remove(doc.value.id)
+  navigateTo('/dashboard')
+}
 </script>
 
 <template>
   <div class="p-4 sm:p-6 max-w-4xl mx-auto">
 
     <NuxtLink to="/dashboard"
-      class="text-sky-400 hover:text-sky-300 transition-colors mb-6 inline-flex items-center gap-1.5 text-sm font-medium">
+      class="text-accent-primary hover:text-accent-primary/80 transition-colors mb-6 inline-flex items-center gap-1.5 text-sm font-medium">
       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
       </svg>
       Back to Dashboard
     </NuxtLink>
 
-    <div v-if="!doc" class="text-slate-500 mt-8 text-center">
+    <div v-if="!doc" class="text-text-muted mt-8 text-center">
       Loading document…
     </div>
 
@@ -139,137 +142,149 @@ const maxScore = computed(() =>
 
       <!-- ─── Header row ──────────────────────────────────────────────────── -->
       <div class="flex items-center justify-between flex-wrap gap-3">
-        <span class="text-sm text-slate-500">
+        <span class="text-sm text-text-muted">
           {{ new Date(doc.createdAt).toLocaleString() }}
         </span>
         <div class="flex items-center gap-3 flex-wrap">
           <button @click="exportDocumentToPDF(doc)"
-            class="bg-rose-500/15 text-rose-400 hover:bg-rose-500/25 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 border border-rose-500/30">
+            class="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card border border-red-200/50 dark:border-red-900/40">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             Export PDF
           </button>
-          <span class="text-sm px-3 py-1.5 rounded-full font-semibold border flex items-center gap-1.5" :class="categoryClass">
-            {{ categoryIcon }} {{ categoryLabel }}
-          </span>
-          <span v-if="categoryConfidence" class="text-xs text-slate-500">
-            {{ categoryConfidence }} confidence
-          </span>
+          
+          <button
+            @click="deleteDocument"
+            class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card"
+            title="Delete document"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
+                   a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
+                   M9 7h6m2 0a2 2 0 00-2-2H9
+                   a2 2 0 00-2 2m10 0H5" />
+            </svg>
+            Delete
+          </button>
+
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-full uppercase tracking-wide font-medium flex items-center gap-1.5" :class="categoryClass">
+              {{ categoryIcon }} {{ categoryLabel }}
+            </span>
+            <span v-if="categoryConfidence" class="text-xs text-text-muted">
+              {{ categoryConfidence }} confidence
+            </span>
+          </div>
         </div>
       </div>
 
       <!-- ─── Document image ─────────────────────────────────────────────── -->
-      <div class="bg-slate-900 border border-slate-700/50 rounded-2xl p-5 shadow-lg">
-        <h2 class="text-slate-200 font-semibold mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
+        <h2 class="text-text-primary font-semibold mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Scanned Image
         </h2>
-        <img :src="doc.image" class="rounded-xl max-w-full shadow-xl mx-auto block" alt="Scanned document" />
+        <img :src="doc.image" class="rounded-lg max-w-full shadow-elevated mx-auto block" alt="Scanned document" />
       </div>
 
       <!-- ─── Core extracted fields ─────────────────────────────────────── -->
-      <div class="bg-slate-900 border border-slate-700/50 rounded-2xl p-5 shadow-lg">
-        <h2 class="text-slate-200 font-semibold mb-4 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
+        <h2 class="text-text-primary font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
           Extracted Fields
         </h2>
 
-        <div v-if="coreFields.length > 0" class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-4">
-          <div v-for="field in coreFields" :key="field.key"
-            class="bg-slate-800/60 rounded-xl p-3 border border-slate-700/40">
-            <span class="block text-slate-500 text-[10px] uppercase tracking-wider mb-1">{{ field.label }}</span>
-            <span class="text-slate-200 text-sm font-medium">
+        <div v-if="coreFields.length > 0" class="grid grid-cols-2 gap-4 mb-4">
+          <div v-for="field in coreFields" :key="field.key" class="bg-bg-tertiary rounded-xl p-3 border border-slate-1/30">
+            <span class="block text-text-muted text-[10px] uppercase tracking-wider mb-1">{{ field.label }}</span>
+            <span class="text-text-secondary text-sm font-medium">
               {{ field.currency && extracted.currency ? extracted.currency + ' ' : '' }}{{ extracted[field.key] }}
             </span>
           </div>
         </div>
-        <div v-else class="text-slate-500 text-sm">No fields extracted yet.</div>
+        <div v-else class="text-text-muted text-sm">No fields extracted yet.</div>
 
         <!-- Category-specific extra fields -->
         <div v-if="categoryFields.length > 0">
-          <div class="text-xs text-slate-500 uppercase tracking-wider mb-3 mt-4 border-t border-slate-700/40 pt-4">
+          <div class="text-xs text-text-muted uppercase tracking-wider mb-3 mt-4 border-t border-slate-1/40 pt-4">
             {{ categoryLabel }} Details
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div v-for="field in categoryFields" :key="field.key"
-              class="bg-slate-800/40 rounded-xl p-3 border border-slate-700/30">
-              <span class="block text-slate-500 text-[10px] uppercase tracking-wider mb-1">{{ field.label }}</span>
-              <span class="text-slate-300 text-sm font-mono">{{ extracted[field.key] }}</span>
+          <div class="grid grid-cols-2 gap-4">
+            <div v-for="field in categoryFields" :key="field.key" class="bg-bg-tertiary rounded-xl p-3 border border-slate-1/30">
+              <span class="block text-text-muted text-[10px] uppercase tracking-wider mb-1">{{ field.label }}</span>
+              <span class="text-text-secondary text-sm font-mono">{{ extracted[field.key] }}</span>
             </div>
           </div>
         </div>
       </div>
 
       <!-- ─── Line items ────────────────────────────────────────────────── -->
-      <div v-if="extracted.items && extracted.items.length > 0"
-        class="bg-slate-900 border border-slate-700/50 rounded-2xl p-5 shadow-lg">
-        <h2 class="text-slate-200 font-semibold mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div v-if="extracted.items && extracted.items.length > 0" class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
+        <h2 class="text-text-primary font-semibold mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
           Line Items
         </h2>
-        <div class="divide-y divide-slate-700/40">
-          <div v-for="(item, index) in extracted.items" :key="index"
-            class="flex justify-between items-center py-2.5 text-sm">
-            <span class="text-slate-300">{{ item.description }}</span>
-            <span class="text-slate-200 font-semibold tabular-nums">
+        <div class="divide-y divide-slate-1/40">
+          <div v-for="(item, index) in extracted.items" :key="index" class="flex justify-between items-center py-2.5 text-sm">
+            <span class="text-text-secondary">{{ item.description }}</span>
+            <span class="text-text-primary font-medium tabular-nums">
               {{ extracted.currency ? extracted.currency + ' ' : '' }}{{ item.amount }}
             </span>
           </div>
         </div>
-        <div v-if="extracted.total"
-          class="flex justify-between items-center pt-3 mt-2 border-t border-slate-600/60">
-          <span class="text-slate-400 text-sm font-semibold">Total</span>
-          <span class="text-slate-100 font-bold tabular-nums">
+        <div v-if="extracted.total" class="flex justify-between items-center pt-3 mt-2 border-t border-slate-1/60">
+          <span class="text-text-muted text-sm font-semibold">Total</span>
+          <span class="text-text-primary font-bold tabular-nums">
             {{ extracted.currency ? extracted.currency + ' ' : '' }}{{ extracted.total }}
           </span>
         </div>
       </div>
 
       <!-- ─── AI Classification breakdown ──────────────────────────────── -->
-      <div class="bg-slate-900 border border-slate-700/50 rounded-2xl p-5 shadow-lg">
-        <h2 class="text-slate-200 font-semibold mb-4 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
+        <h2 class="text-text-primary font-semibold mb-4 flex items-center gap-2">
+          <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
           AI Classification Scores
           <span v-if="patternType && patternType !== 'other'"
-            class="ml-auto text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-400 font-normal">
+            class="ml-auto text-xs px-2 py-0.5 rounded-full bg-bg-tertiary text-text-muted font-normal border border-slate-1/30">
             Pattern: {{ patternType }}
           </span>
         </h2>
         <div v-if="scoreEntries.length > 0" class="space-y-2.5">
           <div v-for="entry in scoreEntries" :key="entry.type" class="flex items-center gap-3">
-            <span class="text-xs text-slate-400 w-28 truncate">{{ entry.label }}</span>
-            <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+            <span class="text-xs text-text-muted w-28 truncate">{{ entry.label }}</span>
+            <div class="flex-1 h-2 bg-bg-tertiary rounded-full overflow-hidden">
               <div class="h-full rounded-full transition-all duration-500"
-                :class="entry.type === categoryType ? 'bg-sky-500' : 'bg-slate-600'"
+                :class="entry.type === categoryType ? 'bg-accent-primary' : 'bg-slate-1/50'"
                 :style="{ width: `${Math.round((entry.score / maxScore) * 100)}%` }">
               </div>
             </div>
-            <span class="text-xs text-slate-500 w-12 text-right tabular-nums">{{ entry.pct }}%</span>
+            <span class="text-xs text-text-muted w-12 text-right tabular-nums">{{ entry.pct }}%</span>
           </div>
         </div>
-        <div v-else class="text-slate-500 text-sm">Classification scores not available.</div>
+        <div v-else class="text-text-muted text-sm">Classification scores not available.</div>
       </div>
 
       <!-- ─── OCR Text ───────────────────────────────────────────────────── -->
-      <div class="bg-slate-900 border border-slate-700/50 rounded-2xl p-5 shadow-lg">
-        <h2 class="text-slate-200 font-semibold mb-3 flex items-center gap-2">
-          <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="bg-bg-secondary border border-slate-1/50 rounded-xl p-5 shadow-card">
+        <h2 class="text-text-primary font-semibold mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
           OCR Text
         </h2>
-        <pre
-          class="bg-slate-950 border border-slate-800 p-4 rounded-xl text-sm whitespace-pre-wrap text-slate-400 font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText || '—' }}</pre>
+        <pre class="bg-bg-primary border border-slate-1 p-4 rounded-xl text-sm whitespace-pre-wrap text-text-secondary font-mono leading-relaxed max-h-96 overflow-y-auto">{{ doc.cleanedText || '—' }}</pre>
       </div>
 
     </div>

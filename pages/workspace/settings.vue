@@ -5,8 +5,6 @@ import { usePermissions } from '~/composables/usePermissions'
 import WorkspaceMemberList from '~/components/workspace/WorkspaceMemberList.vue'
 import InviteForm from '~/components/workspace/InviteForm.vue'
 
-
-
 const workspaceStore = useWorkspaceStore()
 const { isAdmin } = usePermissions()
 
@@ -27,8 +25,6 @@ async function saveName() {
 }
 
 function onInvited({ email, role, inviteUrl }: any) {
-  // Member list will refresh after next fetchMembers call
-  // If no email service: inviteUrl is shown in the InviteForm itself
 }
 
 async function deleteCurrentWorkspace() {
