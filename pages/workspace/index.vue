@@ -71,22 +71,29 @@ function openDocument(docId: string) {
   showModal.value = true
 }
 
+const selectedDoc = computed(() =>
+  documentStore.documents.find(d => (d as any).supabaseId === selectedDocId.value) ?? null
+)
+
+function deleteDoc(id: string, event: Event) {
+  event.preventDefault()
+  event.stopPropagation()
+  if (!confirm('Delete this document from the workspace?')) return
+  documentStore.remove(id)
+}
+
 function closeModal() {
   showModal.value = false
   selectedDocId.value = null
 }
 
-const selectedDoc = computed(() =>
-  documentStore.documents.find(d => (d as any).supabaseId === selectedDocId.value) ?? null
-)
-
 function categoryClass(category: any) {
   return {
-    receipt: 'bg-accent-primary/15 text-accent-primary',
-    invoice: 'bg-success/15 text-success',
-    bill: 'bg-accent-secondary/15 text-accent-secondary',
-    other: 'bg-slate-1/30 text-text-muted',
-  }[category?.type] || 'bg-slate-1/30 text-text-muted'
+    receipt: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/30',
+    invoice: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30',
+    bill:    'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/50 dark:border-teal-900/30',
+    other:   'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50',
+  }[category?.type] || 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50'
 }
 </script>
 
@@ -227,9 +234,23 @@ function categoryClass(category: any) {
         <div
           v-for="doc in workspaceDocuments"
           :key="doc.id"
-          class="bg-bg-secondary rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
+          class="relative bg-bg-secondary rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
           @click="openDocument((doc as any).supabaseId)"
         >
+          <!-- Delete Button -->
+          <button
+            class="absolute top-3 right-3 z-30 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-red-600 dark:text-black hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Delete document"
+            @click="deleteDoc(doc.id, $event)"
+          >
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
+                   a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
+                   M9 7h6m2 0a2 2 0 00-2-2H9
+                   a2 2 0 00-2 2m10 0H5" />
+            </svg>
+          </button>
           <!-- Image preview -->
           <div v-if="doc.image" class="mb-3 h-28 bg-bg-tertiary rounded-lg overflow-hidden">
             <img :src="doc.image" class="object-cover h-full w-full opacity-90" />

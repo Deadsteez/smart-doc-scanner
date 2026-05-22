@@ -24,10 +24,17 @@ const categoryConfidence = computed(() =>
 )
 
 const categoryClass = computed(() => ({
-  invoice: 'bg-accent-primary/15 text-accent-primary',
-  receipt: 'bg-success/15 text-success',
-  other:   'bg-slate-3/15 text-text-muted',
-}[categoryType.value] ?? 'bg-slate-3/15 text-text-muted'))
+  invoice: 'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/30',
+  receipt: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30',
+  other:   'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50',
+}[categoryType.value] ?? 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50'))
+
+async function deleteDocument() {
+  if (!doc.value) return
+  if (!confirm('Are you sure you want to delete this document? This cannot be undone.')) return
+  await documentStore.remove(doc.value.id)
+  navigateTo('/dashboard')
+}
 </script>
 
 <template>
@@ -56,13 +63,27 @@ const categoryClass = computed(() => ({
         <div class="flex items-center gap-3">
           <button
             @click="exportDocumentToPDF(doc)"
-            class="bg-error/15 text-error hover:bg-error/25 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card"
+            class="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card border border-red-200/50 dark:border-red-900/40"
             title="Export as PDF"
           >
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             Export PDF
+          </button>
+          <button
+            @click="deleteDocument"
+            class="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-600 dark:text-red-400 hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 hover:-translate-y-0.5 shadow-card"
+            title="Delete document"
+          >
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
+                   a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
+                   M9 7h6m2 0a2 2 0 00-2-2H9
+                   a2 2 0 00-2 2m10 0H5" />
+            </svg>
+            Delete
           </button>
           <div class="flex items-center gap-2">
             <span

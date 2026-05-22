@@ -58,12 +58,12 @@ function clearFilters() {
 
 function categoryClass(category) {
   return {
-    receipt:       'bg-accent-primary/15 text-accent-primary',
-    invoice:       'bg-success/15 text-success',
-    bill:          'bg-accent-secondary/15 text-accent-secondary',
-    other:         'bg-slate-1/30 text-text-muted',
-    uncategorized: 'bg-slate-1/30 text-text-muted',
-  }[category?.type] || 'bg-slate-1/30 text-text-muted'
+    receipt:       'bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200/50 dark:border-sky-900/30',
+    invoice:       'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/50 dark:border-emerald-900/30',
+    bill:          'bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 border border-teal-200/50 dark:border-teal-900/30',
+    other:         'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50',
+    uncategorized: 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50',
+  }[category?.type] || 'bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50'
 }
 </script>
 
@@ -165,11 +165,12 @@ function categoryClass(category) {
         class="relative bg-bg-secondary border border-slate-1 rounded-xl shadow-elevated hover:shadow-[0_10px_30px_-5px_rgba(2,132,199,0.15),0_4px_12px_rgba(0,0,0,0.08)] hover:-translate-y-1.5 transition-all duration-300 p-4 block">
 
         <!-- Delete Button -->
-        <button class="absolute top-3 z-50 right-3 text-error/70 hover:text-error transition-all"
+        <button
+          class="absolute top-3 right-3 z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-red-600 dark:text-black hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
           title="Delete document"
           @click="deleteDoc(doc.id, $event)"
         >
-          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862
                  a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6
