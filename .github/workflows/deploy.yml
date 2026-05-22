@@ -3,7 +3,11 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - develop2
+      - latest-integration
+
+  pull_request:
+    branches:
+      - latest-integration
 
 jobs:
   ci:
@@ -11,23 +15,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
 
-      - name: Install dependencies
+      - name: Install Dependencies
         run: npm ci
 
-      - name: Nuxt prepare
-        run: npm run postinstall
+      - name: Generate Nuxt Types
+        run: npx nuxi prepare
 
-      - name: Type check
+      - name: Type Check
         run: npx vue-tsc --noEmit
+
+      - name: Build Application
+        run: npm run build
 
   deploy:
     name: Deploy to Render
@@ -36,4 +43,5 @@ jobs:
 
     steps:
       - name: Trigger Render Deploy
-        run: curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
