@@ -7,8 +7,6 @@ const props = defineProps<{
   documents: DocumentRecord[]
 }>()
 
-// ─── Aggregate expenses ───────────────────────────────────────────────────────
-
 const thisMonthDocs = computed(() => {
   const now   = new Date()
   const from  = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
@@ -29,8 +27,6 @@ const thisMonthTotal = computed(() =>
   Object.values(thisMonthAgg.value).reduce((s, c) => s + c.total, 0)
 )
 
-// ─── Category breakdown (sorted by spend) ────────────────────────────────────
-
 const breakdown = computed(() => {
   return Object.entries(thisMonthAgg.value)
     .map(([cat, data]) => {
@@ -50,8 +46,6 @@ const breakdown = computed(() => {
     .sort((a, b) => b.total - a.total)
     .filter(c => c.total > 0)
 })
-
-// ─── Top vendors ──────────────────────────────────────────────────────────────
 
 const topVendors = computed(() => {
   const vendorMap = new Map<string, { count: number; total: number; category: string }>()
@@ -82,8 +76,6 @@ const topVendors = computed(() => {
     .slice(0, 6)
 })
 
-// ─── Smart alerts ─────────────────────────────────────────────────────────────
-
 const smartAlerts = computed(() => {
   const alerts: { type: 'warn' | 'info' | 'ok'; message: string }[] = []
 
@@ -96,7 +88,6 @@ const smartAlerts = computed(() => {
     }
   }
 
-  // Recurring vendors
   const recurring = topVendors.value.filter(v => v.count >= 3)
   if (recurring.length > 0) {
     alerts.push({ type: 'info', message: `Recurring vendors: ${recurring.map(v => v.name).slice(0, 3).join(', ')}` })
@@ -105,7 +96,6 @@ const smartAlerts = computed(() => {
   return alerts.slice(0, 4)
 })
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmt(n: number, ccy = 'INR') {
   if (n >= 100_000) return (n / 100_000).toFixed(1) + 'L'
   if (n >= 1_000)   return (n / 1_000).toFixed(1) + 'k'

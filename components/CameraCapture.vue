@@ -21,7 +21,6 @@ const ocrProgress = ref(0)
 const ocrConfidence = ref(null)
 const selectedLanguage = ref('eng+hin+mar')
 
-// Interactive Preprocessing state variables
 const rotation = ref(0)
 const brightness = ref(0)
 const contrast = ref(1.0)
@@ -53,7 +52,6 @@ const currentNlpJob = ref(null)
 
 const isRegionPassPending = ref(false)
 
-// Multi-page PDF processing state
 const isMultiPagePdf = ref(false)
 const multiPagePdfPages = ref([])
 const multiPageCurrentIndex = ref(0)
@@ -106,12 +104,10 @@ onMounted(() => {
 
     if (msg.type !== 'result') return
 
-    
     if (msg.isRegionPass) {
       isRegionPassPending.value = false
       ocrProgress.value = 100
 
-      
       const regionText = msg.text ?? ''
       const shouldMerge = isRegionPassUseful(regionText, msg.detectedAmount, ocrText.value ?? '')
 
@@ -120,12 +116,11 @@ onMounted(() => {
           '[CameraCapture] Region pass output was worse than pass 1 — discarding, keeping pass-1 text.'
         )
         isRegionPassPending.value = false
-       
-        await saveDocument(ocrText.value ?? '',true)
+
+        await saveDocument(ocrText.value ?? '', true)
         return
       }
 
-    
       const combined = mergeOcrResults(
         firstPassTextSnapshot ?? ocrText.value ?? '',
         regionText,
@@ -133,14 +128,14 @@ onMounted(() => {
       )
       ocrText.value = combined
 
-      await saveDocument(combined,true)
+      await saveDocument(combined, true)
       return
     }
 
     if (isMultiPagePdf.value) {
       multiPageText.value.push(msg.text)
       multiPageCurrentIndex.value++
-      
+
       if (multiPageCurrentIndex.value < multiPagePdfPages.value.length) {
         const nextPageImage = multiPagePdfPages.value[multiPageCurrentIndex.value].image
         processImage(nextPageImage, true)
@@ -150,18 +145,17 @@ onMounted(() => {
         ocrText.value = combinedText
         firstPassTextSnapshot = combinedText
         ocrProgress.value = 100
-        
-        // Restore first page image for saving
+
         processedImage.value = multiPagePdfPages.value[0].image
         capturedImage.value = multiPagePdfPages.value[0].image
-        
+
         await saveDocument(combinedText)
       }
       return
     }
 
     ocrText.value = msg.text
-   
+
     firstPassTextSnapshot = msg.text
     ocrConfidence.value = msg.confidence ? Math.round(msg.confidence) : null
     ocrProgress.value = 100
@@ -207,13 +201,12 @@ onMounted(() => {
 
     if (msg.type === 'result') {
       nlpStatus.value = null
-      nlpBusy.value   = false
+      nlpBusy.value = false
       const job = currentNlpJob.value
 
       if (job) {
         const docType = msg.category?.type ?? 'other'
 
-      
         if (
           processedImage.value &&
           docType !== 'other' &&
@@ -250,7 +243,6 @@ onBeforeUnmount(() => {
   nlpWorker?.terminate()
 })
 
-
 async function startCamera() {
   cameraError.value = null
   try {
@@ -283,7 +275,7 @@ function captureFrame() {
     return
   }
 
-  const width  = videoEl.value.videoWidth  || videoEl.value.clientWidth
+  const width = videoEl.value.videoWidth || videoEl.value.clientWidth
   const height = videoEl.value.videoHeight || videoEl.value.clientHeight
 
   if (!width || !height) {
@@ -292,12 +284,11 @@ function captureFrame() {
   }
 
   const canvas = document.createElement('canvas')
-  canvas.width  = width
+  canvas.width = width
   canvas.height = height
   canvas.getContext('2d').drawImage(videoEl.value, 0, 0, width, height)
   processImage(canvas.toDataURL('image/jpeg', 0.92))
 }
-
 
 function triggerFileInput() {
   fileInputEl.value?.click()
@@ -322,7 +313,7 @@ function handlePdfPagesSelected(pages) {
   pdfPages.value = pages
   currentPdfPageIndex.value = 0
   showPdfUploader.value = false
-  
+
   if (pages.length === 0) return
 
   if (pages.length === 1) {
@@ -333,8 +324,7 @@ function handlePdfPagesSelected(pages) {
     multiPagePdfPages.value = pages
     multiPageCurrentIndex.value = 0
     multiPageText.value = []
-    
-    // Start processing first page
+
     processImage(pages[0].image, true)
   }
 }
@@ -359,23 +349,21 @@ function processNextPdfPage() {
   }
 }
 
-
 function processImage(dataUrl, skipEdit = false) {
-  capturedImage.value        = dataUrl
-  processedImage.value       = null
-  ocrText.value              = null
-  firstPassTextSnapshot      = null   
-  ocrProgress.value          = 0
-  isRegionPassPending.value  = false
-  isSaved.value              = false
-  saveError.value            = null
-  captureError.value         = null
+  capturedImage.value = dataUrl
+  processedImage.value = null
+  ocrText.value = null
+  firstPassTextSnapshot = null
+  ocrProgress.value = 0
+  isRegionPassPending.value = false
+  isSaved.value = false
+  saveError.value = null
+  captureError.value = null
 
   if (skipEdit) {
     isEditing.value = false
     preprocessWorker.postMessage({ imageDataURL: dataUrl })
   } else {
-    // Reset adjustments for a new capture/upload
     brightness.value = 0
     contrast.value = 1.0
     rotation.value = 0
@@ -387,7 +375,6 @@ function processImage(dataUrl, skipEdit = false) {
   }
 }
 
-// Drag & Drop Crop box logic
 let startX = 0
 let startY = 0
 let startCropX = 0
@@ -396,24 +383,23 @@ let startCropW = 0
 let startCropH = 0
 
 function onCropImageLoad() {
-  // Triggers measurement when needed
 }
 
 function startDrag(event, handle) {
   event.preventDefault()
   activeDrag.value = handle
-  
+
   const clientX = event.touches ? event.touches[0].clientX : event.clientX
   const clientY = event.touches ? event.touches[0].clientY : event.clientY
-  
+
   startX = clientX
   startY = clientY
-  
+
   startCropX = cropX.value
   startCropY = cropY.value
   startCropW = cropW.value
   startCropH = cropH.value
-  
+
   window.addEventListener('mousemove', onDrag)
   window.addEventListener('touchmove', onDrag, { passive: false })
   window.addEventListener('mouseup', endDrag)
@@ -423,29 +409,29 @@ function startDrag(event, handle) {
 function onDrag(event) {
   if (!activeDrag.value || !cropImageEl.value) return
   event.preventDefault()
-  
+
   const clientX = event.touches ? event.touches[0].clientX : event.clientX
   const clientY = event.touches ? event.touches[0].clientY : event.clientY
-  
+
   const deltaX = clientX - startX
   const deltaY = clientY - startY
-  
+
   const imgW = cropImageEl.value.clientWidth
   const imgH = cropImageEl.value.clientHeight
   if (!imgW || !imgH) return
-  
+
   const pctDeltaX = (deltaX / imgW) * 100
   const pctDeltaY = (deltaY / imgH) * 100
-  
+
   if (activeDrag.value === 'move') {
     let newX = startCropX + pctDeltaX
     let newY = startCropY + pctDeltaY
-    
+
     if (newX < 0) newX = 0
     if (newY < 0) newY = 0
     if (newX + startCropW > 100) newX = 100 - startCropW
     if (newY + startCropH > 100) newY = 100 - startCropH
-    
+
     cropX.value = Math.round(newX)
     cropY.value = Math.round(newY)
   } else {
@@ -453,9 +439,9 @@ function onDrag(event) {
     let newY = startCropY
     let newW = startCropW
     let newH = startCropH
-    
+
     const minSize = 10
-    
+
     if (activeDrag.value.includes('left')) {
       const maxX = startCropX + startCropW - minSize
       let targetX = startCropX + pctDeltaX
@@ -467,7 +453,7 @@ function onDrag(event) {
       targetW = Math.max(minSize, Math.min(targetW, 100 - startCropX))
       newW = targetW
     }
-    
+
     if (activeDrag.value.includes('top')) {
       const maxY = startCropY + startCropH - minSize
       let targetY = startCropY + pctDeltaY
@@ -479,7 +465,7 @@ function onDrag(event) {
       targetH = Math.max(minSize, Math.min(targetH, 100 - startCropY))
       newH = targetH
     }
-    
+
     cropX.value = Math.round(newX)
     cropY.value = Math.round(newY)
     cropW.value = Math.round(newW)
@@ -497,22 +483,21 @@ function endDrag() {
 
 function rotateCapturedImage(clockwise = true) {
   if (!capturedImage.value) return
-  
+
   const img = new Image()
   img.onload = () => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    
+
     canvas.width = img.height
     canvas.height = img.width
-    
+
     ctx.translate(canvas.width / 2, canvas.height / 2)
     ctx.rotate((clockwise ? 90 : -90) * Math.PI / 180)
     ctx.drawImage(img, -img.width / 2, -img.height / 2)
-    
+
     capturedImage.value = canvas.toDataURL('image/jpeg', 0.95)
-    
-    // Reset crop bounds on rotate
+
     cropX.value = 10
     cropY.value = 10
     cropW.value = 80
@@ -532,36 +517,36 @@ function resetAdjustments() {
 
 function applyAdjustments() {
   if (!capturedImage.value) return
-  
+
   isSaving.value = true
   saveError.value = null
-  
+
   const img = new Image()
   img.onload = () => {
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    
+
     const srcX = (cropX.value / 100) * img.width
     const srcY = (cropY.value / 100) * img.height
     const srcW = (cropW.value / 100) * img.width
     const srcH = (cropH.value / 100) * img.height
-    
+
     canvas.width = srcW
     canvas.height = srcH
-    
+
     ctx.filter = `brightness(${100 + brightness.value}%) contrast(${contrast.value})`
-    
+
     ctx.drawImage(
       img,
       srcX, srcY, srcW, srcH,
       0, 0, srcW, srcH
     )
-    
+
     const finalDataUrl = canvas.toDataURL('image/jpeg', 0.95)
-    
+
     isEditing.value = false
     isSaving.value = false
-    
+
     processImage(finalDataUrl, true)
   }
   img.onerror = (err) => {
@@ -574,17 +559,17 @@ function applyAdjustments() {
 
 function runOCR() {
   if (!processedImage.value) return
-  ocrText.value             = null
-  firstPassTextSnapshot     = null   
-  ocrProgress.value         = 0
-  ocrConfidence.value       = null
+  ocrText.value = null
+  firstPassTextSnapshot = null
+  ocrProgress.value = 0
+  ocrConfidence.value = null
   isRegionPassPending.value = false
-  isSaved.value             = false
-  saveError.value           = null
+  isSaved.value = false
+  saveError.value = null
   ocrWorker.postMessage({
-    image:    processedImage.value,
+    image: processedImage.value,
     language: selectedLanguage.value,
-    mode:     'full',
+    mode: 'full',
   })
 }
 
@@ -593,24 +578,22 @@ function fireRegionPass(imageDataUrl, docType) {
   isRegionPassPending.value = true
   isSaved.value = false
   ocrWorker.postMessage({
-    image:    imageDataUrl,
+    image: imageDataUrl,
     language: selectedLanguage.value,
-    mode:     'region',
+    mode: 'region',
     docType,
   })
 }
 
 function isRegionPassUseful(regionText, detectedAmount, firstPassText) {
- 
+
   if (detectedAmount != null) return true
 
   const rStripped = (regionText ?? '').replace(/\s/g, '')
   const fStripped = (firstPassText ?? '').replace(/\s/g, '')
 
- 
   if (rStripped.length < 10) return false
 
-  
   if (fStripped.length > 0 && rStripped.length / fStripped.length < 0.30) return false
 
   const regionLines = new Set(
@@ -620,7 +603,6 @@ function isRegionPassUseful(regionText, detectedAmount, firstPassText) {
     (firstPassText ?? '').split('\n').map(l => l.trim().toLowerCase()).filter(Boolean)
   )
 
-  
   const newLines = [...regionLines].filter(l => !firstLines.has(l)).length
   const retainedRatio = firstLines.size > 0
     ? [...regionLines].filter(l => firstLines.has(l)).length / firstLines.size
@@ -632,17 +614,17 @@ function isRegionPassUseful(regionText, detectedAmount, firstPassText) {
 }
 
 function mergeOcrResults(firstPass, regionPass, detectedAmount) {
- 
+
   const lines = new Map()
 
   for (const line of (firstPass ?? '').split('\n')) {
     const t = line.trim()
-    if (t) lines.set(t.toLowerCase(), t)   
+    if (t) lines.set(t.toLowerCase(), t)
   }
 
   for (const line of (regionPass ?? '').split('\n')) {
     const t = line.trim()
-    if (t) lines.set(t.toLowerCase(), t)  
+    if (t) lines.set(t.toLowerCase(), t)
   }
 
   const amountPrefix = detectedAmount != null
@@ -674,9 +656,9 @@ function dispatchNlpJob(job) {
   nlpBusy.value = true
   currentNlpJob.value = job
   nlpWorker.postMessage({
-    text:       job.text,
+    text: job.text,
     cvFeatures: job.cvFeatures,
-    image:      job.image,
+    image: job.image,
   })
 }
 
@@ -692,18 +674,18 @@ async function saveDocument(rawText, isRefinement = false) {
   }
   if (!processedImage.value) return
 
-  isSaving.value  = true
+  isSaving.value = true
   saveError.value = null
   nlpStatus.value = nlpReady.value ? 'Extracting fields...' : 'Loading NLP models...'
 
   try {
     const cleanedText = cleanOcrText(rawText)
-    const cvFeatures  = await extractCvFeatures(processedImage.value)
+    const cvFeatures = await extractCvFeatures(processedImage.value)
     enqueueNlpJob(cleanedText, cvFeatures, processedImage.value, isRefinement)
   } catch (err) {
     console.error('Pipeline error:', err)
     saveError.value = 'Processing failed: ' + err.message
-    isSaving.value  = false
+    isSaving.value = false
     nlpStatus.value = null
   }
 }
@@ -712,21 +694,21 @@ async function saveDocumentWithNlp(cleanedText, extracted, category, isRefinemen
   try {
     if (isRefinement && documentStore.lastId) {
       await documentStore.update(documentStore.lastId, {
-        ocrText:     ocrText.value,
+        ocrText: ocrText.value,
         cleanedText,
         extracted,
         category,
-        synced:      false,
+        synced: false,
       })
     } else {
       const id = await documentStore.add({
-        createdAt:   Date.now(),
-        image:       processedImage.value,
-        ocrText:     ocrText.value,
+        createdAt: Date.now(),
+        image: processedImage.value,
+        ocrText: ocrText.value,
         cleanedText,
         extracted,
         category,
-        synced:      false,
+        synced: false,
       })
       documentStore.lastId = id
       generateSmartSuggestions(extracted, category, cleanedText)
@@ -735,7 +717,7 @@ async function saveDocumentWithNlp(cleanedText, extracted, category, isRefinemen
   } catch (err) {
     saveError.value = 'Failed to save: ' + err.message
   } finally {
-    isSaving.value  = false
+    isSaving.value = false
     nlpStatus.value = null
   }
 }
@@ -743,19 +725,19 @@ async function saveDocumentWithNlp(cleanedText, extracted, category, isRefinemen
 async function saveDocumentFallback(cleanedText, cvFeatures) {
   console.warn('[CameraCapture] NLP failed, using regex fallback')
   try {
-    const { extractFields }    = await import('~/services/extractFields')
+    const { extractFields } = await import('~/services/extractFields')
     const { classifyDocument } = await import('~/composables/useDocumentClassifier')
-    const category  = classifyDocument(cleanedText, cvFeatures)
+    const category = classifyDocument(cleanedText, cvFeatures)
     const extracted = extractFields(cleanedText, category.type)
 
     await documentStore.add({
-      createdAt:   Date.now(),
-      image:       processedImage.value,
-      ocrText:     ocrText.value,
+      createdAt: Date.now(),
+      image: processedImage.value,
+      ocrText: ocrText.value,
       cleanedText,
       extracted,
       category,
-      synced:      false,
+      synced: false,
     })
     documentStore.lastId = id
     generateSmartSuggestions(extracted, category, cleanedText)
@@ -763,14 +745,14 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
   } catch (err) {
     saveError.value = 'Failed to save: ' + err.message
   } finally {
-    isSaving.value  = false
+    isSaving.value = false
     nlpStatus.value = null
   }
 }
 
 function generateSmartSuggestions(extracted, category, text) {
   const suggestions = []
-  
+
   if (category?.type && category.type !== 'other') {
     suggestions.push(`Categorized as: ${getCategoryLabel(category.type)}`)
   }
@@ -781,7 +763,7 @@ function generateSmartSuggestions(extracted, category, text) {
       suggestions.push(`Detected ${semantic} vendor`)
     }
 
-    const pastCount = documentStore.documents.filter(d => 
+    const pastCount = documentStore.documents.filter(d =>
       (d.extracted?.vendor || '').toLowerCase() === extracted.vendor.toLowerCase()
     ).length
 
@@ -794,20 +776,20 @@ function generateSmartSuggestions(extracted, category, text) {
 }
 
 function clearImages() {
-  capturedImage.value       = null
-  processedImage.value      = null
-  ocrText.value             = null
-  firstPassTextSnapshot     = null
-  ocrProgress.value         = 0
-  ocrConfidence.value       = null
+  capturedImage.value = null
+  processedImage.value = null
+  ocrText.value = null
+  firstPassTextSnapshot = null
+  ocrProgress.value = 0
+  ocrConfidence.value = null
   isRegionPassPending.value = false
-  isSaved.value             = false
-  saveError.value           = null
-  captureError.value        = null
-  smartSuggestions.value    = []
-  pdfPages.value            = []
+  isSaved.value = false
+  saveError.value = null
+  captureError.value = null
+  smartSuggestions.value = []
+  pdfPages.value = []
   currentPdfPageIndex.value = 0
-  showPdfUploader.value     = false
+  showPdfUploader.value = false
 }
 
 const showCamera = ref(true)
@@ -815,7 +797,7 @@ const showCamera = ref(true)
 async function toggleCamera() {
   if (stream.value?.active) {
     stopCamera()
-    stream.value  = null
+    stream.value = null
     showCamera.value = false
   } else {
     showCamera.value = true
@@ -919,7 +901,6 @@ async function toggleCamera() {
       </div>
     </div>
 
-    <!-- Progress banner — shown during both first pass and region pass -->
     <div v-if="isSaving || isRegionPassPending"
       class="p-4 bg-accent-primary/10 border-accent-primary/30 rounded-xl text-sm text-accent-primary flex items-center gap-3">
       <div class="w-4 h-4 border-2 border-accent-primary border-t-transparent rounded-full animate-spin flex-shrink-0">
@@ -937,30 +918,25 @@ async function toggleCamera() {
             {{ isEditing ? 'Edit & Crop Document' : 'Original Snapshot' }}
           </p>
         </div>
-        <button class="text-error hover:text-red-400 transition-colors text-sm font-medium flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-error/10" title="Clear image"
-          @click="clearImages">
+        <button
+          class="text-error hover:text-red-400 transition-colors text-sm font-medium flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-error/10"
+          title="Clear image" @click="clearImages">
           <span>🗑️</span> Clear
         </button>
       </div>
 
       <!-- Editing / Adjustments Active Workspace -->
       <div v-if="isEditing" class="space-y-5">
-        <!-- Interactive Crop Area -->
-        <div class="relative bg-bg-primary rounded-xl overflow-hidden p-2 flex items-center justify-center min-h-[260px] border border-slate-800/80 shadow-inner">
-          <div class="relative max-w-full select-none overflow-hidden touch-none" style="width: fit-content;">
-            <img
-              ref="cropImageEl"
-              :src="capturedImage"
-              :style="{
-                filter: `brightness(${100 + brightness}%) contrast(${contrast})`,
-                maxHeight: '360px',
-                display: 'block'
-              }"
-              class="rounded-lg shadow-md max-w-full select-none pointer-events-none"
-              @load="onCropImageLoad"
-            />
 
-            <!-- Rectangular Crop Overlay Box -->
+        <div
+          class="relative bg-bg-primary rounded-xl overflow-hidden p-2 flex items-center justify-center min-h-[260px] border border-slate-800/80 shadow-inner">
+          <div class="relative max-w-full select-none overflow-hidden touch-none" style="width: fit-content;">
+            <img ref="cropImageEl" :src="capturedImage" :style="{
+              filter: `brightness(${100 + brightness}%) contrast(${contrast})`,
+              maxHeight: '360px',
+              display: 'block'
+            }" class="rounded-lg shadow-md max-w-full select-none pointer-events-none" @load="onCropImageLoad" />
+
             <div
               class="absolute border-2 border-dashed border-accent-primary bg-accent-primary/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move select-none"
               :style="{
@@ -968,76 +944,52 @@ async function toggleCamera() {
                 top: `${cropY}%`,
                 width: `${cropW}%`,
                 height: `${cropH}%`
-              }"
-              @mousedown="startDrag($event, 'move')"
-              @touchstart="startDrag($event, 'move')"
-            >
-              <!-- Drag Handles -->
+              }" @mousedown="startDrag($event, 'move')" @touchstart="startDrag($event, 'move')">
+
               <div
                 class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -top-2.5 -left-2.5 cursor-nwse-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
-                @mousedown.stop="startDrag($event, 'top-left')"
-                @touchstart.stop="startDrag($event, 'top-left')"
-              >
+                @mousedown.stop="startDrag($event, 'top-left')" @touchstart.stop="startDrag($event, 'top-left')">
                 <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
               </div>
               <div
                 class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -top-2.5 -right-2.5 cursor-nesw-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
-                @mousedown.stop="startDrag($event, 'top-right')"
-                @touchstart.stop="startDrag($event, 'top-right')"
-              >
+                @mousedown.stop="startDrag($event, 'top-right')" @touchstart.stop="startDrag($event, 'top-right')">
                 <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
               </div>
               <div
                 class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -bottom-2.5 -left-2.5 cursor-nesw-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
-                @mousedown.stop="startDrag($event, 'bottom-left')"
-                @touchstart.stop="startDrag($event, 'bottom-left')"
-              >
+                @mousedown.stop="startDrag($event, 'bottom-left')" @touchstart.stop="startDrag($event, 'bottom-left')">
                 <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
               </div>
               <div
                 class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -bottom-2.5 -right-2.5 cursor-nwse-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
                 @mousedown.stop="startDrag($event, 'bottom-right')"
-                @touchstart.stop="startDrag($event, 'bottom-right')"
-              >
+                @touchstart.stop="startDrag($event, 'bottom-right')">
                 <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Preprocessing Control Sliders and Rotator -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-bg-tertiary/50 p-4 rounded-xl border border-slate-700/30">
-          
-          <!-- Slider Box -->
+
           <div class="space-y-4">
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-text-secondary">
                 <span>💡 BRIGHTNESS</span>
                 <span class="text-accent-primary">{{ brightness > 0 ? `+${brightness}` : brightness }}%</span>
               </div>
-              <input
-                type="range"
-                v-model.number="brightness"
-                min="-60"
-                max="60"
-                step="1"
-                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50"
-              />
+              <input type="range" v-model.number="brightness" min="-60" max="60" step="1"
+                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50" />
             </div>
-            
+
             <div class="space-y-1.5">
               <div class="flex justify-between text-xs font-semibold text-text-secondary">
                 <span>🌗 CONTRAST</span>
                 <span class="text-accent-primary">{{ Math.round(contrast * 100) }}%</span>
               </div>
-              <input
-                type="range"
-                v-model.number="contrast"
-                min="0.5"
-                max="2.0"
-                step="0.05"
-                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50"
-              />
+              <input type="range" v-model.number="contrast" min="0.5" max="2.0" step="0.05"
+                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50" />
             </div>
           </div>
 
@@ -1046,29 +998,20 @@ async function toggleCamera() {
             <div class="space-y-1.5">
               <span class="text-xs font-semibold text-text-secondary block">🔄 ROTATION (90° STEPS)</span>
               <div class="flex gap-2">
-                <button
-                  type="button"
-                  @click="rotateCapturedImage(false)"
-                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
-                >
+                <button type="button" @click="rotateCapturedImage(false)"
+                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5">
                   ↩️ Rotate Left
                 </button>
-                <button
-                  type="button"
-                  @click="rotateCapturedImage(true)"
-                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
-                >
+                <button type="button" @click="rotateCapturedImage(true)"
+                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5">
                   ↪️ Rotate Right
                 </button>
               </div>
             </div>
 
             <div class="flex gap-2 pt-1.5">
-              <button
-                type="button"
-                @click="resetAdjustments"
-                class="w-full bg-error/10 hover:bg-error/20 text-error border border-error/20 px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
-              >
+              <button type="button" @click="resetAdjustments"
+                class="w-full bg-error/10 hover:bg-error/20 text-error border border-error/20 px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5">
                 🧹 Reset Edits
               </button>
             </div>
@@ -1078,18 +1021,12 @@ async function toggleCamera() {
 
         <!-- Action Buttons -->
         <div class="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            type="button"
-            @click="applyAdjustments"
-            class="flex-1 bg-accent-secondary hover:bg-teal-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-teal hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(20,184,166,0.3)]"
-          >
+          <button type="button" @click="applyAdjustments"
+            class="flex-1 bg-accent-secondary hover:bg-teal-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-teal hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(20,184,166,0.3)]">
             ✅ Apply & Enhance
           </button>
-          <button
-            type="button"
-            @click="processImage(capturedImage, true)"
-            class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-slate-700 hover:-translate-y-0.5"
-          >
+          <button type="button" @click="processImage(capturedImage, true)"
+            class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-slate-700 hover:-translate-y-0.5">
             ⚡ Skip & Auto-Enhance
           </button>
         </div>
@@ -1097,16 +1034,10 @@ async function toggleCamera() {
 
       <!-- Passive Preview -->
       <div v-else class="space-y-4">
-        <img
-          :src="capturedImage"
-          class="rounded-xl shadow-md max-h-[300px] mx-auto block border border-slate-800"
-        />
+        <img :src="capturedImage" class="rounded-xl shadow-md max-h-[300px] mx-auto block border border-slate-800" />
         <div class="flex justify-center">
-          <button
-            type="button"
-            @click="isEditing = true"
-            class="bg-bg-tertiary border border-slate-700/80 hover:bg-bg-elevated text-text-secondary px-4 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center gap-1.5"
-          >
+          <button type="button" @click="isEditing = true"
+            class="bg-bg-tertiary border border-slate-700/80 hover:bg-bg-elevated text-text-secondary px-4 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center gap-1.5">
             ✏️ Adjust Image & Re-crop
           </button>
         </div>
