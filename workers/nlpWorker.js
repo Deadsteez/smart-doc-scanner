@@ -112,10 +112,8 @@ async function loadPipelines(pipeline, MODEL_OPTIONS) {
   }
 }
 
-// Preload models when worker starts to reduce latency after OCR completes
 initPromise = initializeWorker()
 
-// Handle messages from main thread
 self.onmessage = async (e) => {
   const { text, cvFeatures } = e.data
 

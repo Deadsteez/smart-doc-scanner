@@ -4,7 +4,6 @@ import { cleanOcrText, isValidOcrOutput } from '~/composables/useOcrCleanup'
 import { extractCvFeatures } from '~/composables/useCvFeatures'
 import NlpWorkerClass from '~/workers/nlpWorker.js?worker'
 
-// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface GroundTruth {
   company?: string
@@ -37,8 +36,6 @@ interface Summary {
   categoryAccuracy: number
 }
 
-// ─── State ───────────────────────────────────────────────────────────────────
-
 const phase = ref<'setup' | 'running' | 'done'>('setup')
 
 const imageFiles      = ref<File[]>([])
@@ -63,7 +60,6 @@ const stages = [
   { key: 'score',      label: 'Score',      icon: '✅' },
 ]
 
-// ─── Workers ─────────────────────────────────────────────────────────────────
 
 let preprocessWorker: Worker | null = null
 let ocrWorker:        Worker | null = null

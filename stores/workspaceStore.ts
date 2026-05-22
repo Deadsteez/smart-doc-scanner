@@ -13,7 +13,6 @@ import type {
 export const useWorkspaceStore = defineStore('workspace', () => {
   const supabase = getSupabase()
 
-  // ── State ──────────────────────────────────────────────────
   const workspaces = ref<Workspace[]>([])
   const currentWorkspace = ref<Workspace | null>(null)
   const members = ref<WorkspaceMember[]>([])
@@ -21,9 +20,8 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
 
-  // ── Getters ─────────────────────────────────────────────────
   const currentUserId = computed<string | null>(() => {
-    // Resolved reactively — components should call loadCurrentUser() on mount
+  
     return _currentUserId.value
   })
   const _currentUserId = ref<string | null>(null)
@@ -36,7 +34,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     approvals.value.filter(a => a.status === 'pending')
   )
 
-  // ── Helpers ─────────────────────────────────────────────────
   async function loadCurrentUser() {
     const { data } = await supabase.auth.getUser()
     _currentUserId.value = data.user?.id ?? null
@@ -52,7 +49,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       + '-' + Math.random().toString(36).slice(2, 7)
   }
 
-  // ── Workspace CRUD ──────────────────────────────────────────
   async function fetchWorkspaces() {
     loading.value = true
     error.value = null
@@ -65,7 +61,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (err) throw err
       workspaces.value = data ?? []
 
-      // Auto-select first workspace if none selected
+   
       if (!currentWorkspace.value && workspaces.value.length > 0) {
       
         await selectWorkspace(workspaces.value[0]!.id)
@@ -171,7 +167,6 @@ if (idx !== -1) {
     }
   }
 
-  // ── Members ─────────────────────────────────────────────────
   async function fetchMembers(workspaceId: string) {
     loading.value = true
     try {
@@ -204,7 +199,6 @@ if (idx !== -1) {
     members.value = members.value.filter(m => m.id !== memberId)
   }
 
-  // ── Approvals ────────────────────────────────────────────────
   async function fetchApprovals(workspaceId: string) {
     const { data, error: err } = await supabase
       .from('document_approvals')
@@ -289,18 +283,18 @@ if (idx !== -1) {
   }
 
   return {
-    // state
+   
     workspaces,
     currentWorkspace,
     members,
     approvals,
     loading,
     error,
-    // getters
+   
     currentUserId,
     currentMember,
     pendingApprovals,
-    // actions
+   
     loadCurrentUser,
     fetchWorkspaces,
     selectWorkspace,

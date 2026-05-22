@@ -1,11 +1,3 @@
-// preprocessWorker.js
-// OpenCV preprocessing pipeline for OCR — runs inside a dedicated Web Worker.
-//
-// Changes vs original:
-//  • Luminance-aware adaptive threshold: dark-background images are auto-inverted
-//    before binarisation so text always comes out black-on-white for Tesseract.
-//  • estimateLuminance() helper (ported from UPI SnapPay's useOcr.ts).
-//  • Deskew guard is unchanged but uses the same safe clone path.
 
 let cvLoaded = false
 console.log('[Preprocess Worker] Starting...')
@@ -36,11 +28,6 @@ async function waitForOpenCV() {
   })
 }
 
-// ---------------------------------------------------------------------------
-// Luminance helper — ported from UPI SnapPay's useOcr.ts
-// Samples the top-left 80×80 pixels of an OffscreenCanvas.
-// Returns 0–255; values < 128 indicate a dark background.
-// ---------------------------------------------------------------------------
 
 function estimateLuminance(canvas) {
   const ctx = canvas.getContext('2d')
@@ -55,10 +42,6 @@ function estimateLuminance(canvas) {
   }
   return count ? total / count : 255
 }
-
-// ---------------------------------------------------------------------------
-// Worker message handler
-// ---------------------------------------------------------------------------
 
 self.onmessage = async (e) => {
   const { imageDataURL } = e.data
@@ -82,9 +65,6 @@ self.onmessage = async (e) => {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Full preprocessing pipeline
-// ---------------------------------------------------------------------------
 
 async function preprocess(dataURL) {
   const res    = await fetch(dataURL)
@@ -95,7 +75,7 @@ async function preprocess(dataURL) {
   const origH = bitmap.height
   console.log(`[Preprocess Worker] Input: ${origW}x${origH}`)
 
-  // ── Scale to OCR-friendly resolution without over-enlarging ────────────────
+  
   const TARGET_LONG_SIDE = 2400
   const scale  = Math.max(1.0, Math.min(TARGET_LONG_SIDE / Math.max(origW, origH), 2.0))
   const scaledW = Math.round(origW * scale)
@@ -105,10 +85,7 @@ async function preprocess(dataURL) {
   const ctx    = canvas.getContext('2d')
   ctx.drawImage(bitmap, 0, 0, scaledW, scaledH)
 
-  // ── Luminance check BEFORE handing off to OpenCV ───────────────────────────
-  // If the document has a dark background (e.g. night-mode screenshot, dark
-  // receipt paper) we need to invert so adaptive threshold produces
-  // black text on white — which is what Tesseract expects.
+ 
   const luminance    = estimateLuminance(canvas)
   const isDarkBg     = luminance < 128
   console.log(`[Preprocess Worker] Luminance: ${luminance.toFixed(1)} isDarkBg:${isDarkBg}`)
@@ -120,12 +97,12 @@ async function preprocess(dataURL) {
   let denoised  = new cv.Mat()
   let sharpened = new cv.Mat()
   let binary    = new cv.Mat()
-  let inverted  = new cv.Mat()   // used only when isDarkBg
+  let inverted  = new cv.Mat()   
   let deskewed  = null
   let padded    = null
 
   try {
-    // 1. Convert to grayscale
+    
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
 
     // 2. Mild Gaussian blur to suppress sensor/JPEG noise
@@ -136,9 +113,7 @@ async function preprocess(dataURL) {
     cv.filter2D(denoised, sharpened, cv.CV_8U, kernel)
     kernel.delete()
 
-    // 4. Luminance-aware inversion before thresholding
-    //    Dark-background images: invert so text is dark on light background,
-    //    then the adaptive threshold will produce the correct black-on-white result.
+   
     let threshInput = sharpened
     if (isDarkBg) {
       cv.bitwise_not(sharpened, inverted)
@@ -207,10 +182,6 @@ async function preprocess(dataURL) {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Deskew — correct dominant text skew before OCR
-// Identical logic to original; extracted here for clarity.
-// ---------------------------------------------------------------------------
 
 function deskewImage(binaryMat) {
   const MAX_SKEW_ANGLE = 15

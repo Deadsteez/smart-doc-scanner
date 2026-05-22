@@ -9,7 +9,7 @@ definePageMeta({ layout: false })
 const route = useRoute()
 const supabase = getSupabase()
 
-const state = ref('loading') // 'loading' | 'signing-in' | 'accepting' | 'success' | 'error'
+const state = ref('loading') 
 const errorMessage = ref('')
 const workspaceId = ref('')
 
@@ -26,11 +26,10 @@ onMounted(async () => {
     return
   }
 
-  // ── Ensure user is authenticated ────────────────────────────
   const { data: { session } } = await supabase.auth.getSession()
 
   if (!session) {
-    // Save token to localStorage and redirect to login, then come back
+  
     if (import.meta.client) {
       localStorage.setItem('pending_invite_token', token)
     }
@@ -39,7 +38,6 @@ onMounted(async () => {
     return
   }
 
-  // ── Accept the invite ────────────────────────────────────────
   state.value = 'accepting'
   try {
     const data = await $fetch<AcceptInviteResponse>('/api/workspace/accept-invite', {
@@ -49,15 +47,15 @@ onMounted(async () => {
 workspaceId.value = data.workspace_id
     state.value = 'success'
 
-    // Clean up pending invite from storage
+    
     if (import.meta.client) localStorage.removeItem('pending_invite_token')
 
-    // Auto-select the newly joined workspace
+    
     const workspaceStore = useWorkspaceStore()
     await workspaceStore.fetchWorkspaces()
     await workspaceStore.selectWorkspace(data.workspace_id)
 
-    // Redirect to workspace after short delay
+    
     setTimeout(() => navigateTo('/workspace'), 1800)
   } catch (err: any) {
     state.value = 'error'

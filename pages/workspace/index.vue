@@ -21,7 +21,7 @@ onMounted(async () => {
   if (!workspaceStore.currentWorkspace) {
     await workspaceStore.fetchWorkspaces()
   } else {
-    // Re-fetch members and approvals to ensure counts are fresh
+  
     await workspaceStore.fetchMembers(workspaceStore.currentWorkspace.id)
     await workspaceStore.fetchApprovals(workspaceStore.currentWorkspace.id)
   }
