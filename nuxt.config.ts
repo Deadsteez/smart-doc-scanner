@@ -1,6 +1,5 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
-
 export default defineNuxtConfig({
   devtools: { enabled: process.env.NODE_ENV === 'development' },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', '@pinia/nuxt', '@vite-pwa/nuxt', 'nuxt-security'],
@@ -35,6 +34,22 @@ export default defineNuxtConfig({
       ],
     }
   },
+
+  // @ts-ignore
+nitro: {
+  preset: 'node-server',
+},
+
+// @ts-ignore
+routeRules: {
+  '/invite/**': { ssr: false },
+  '/workspace/**': { ssr: false },
+  '/dashboard': { ssr: false },
+  '/scan': { ssr: false },
+  '/profile': { ssr: false },
+  '/doc/**': { ssr: false },
+  '/eval': { ssr: false },
+},
 
   security: {
     nonce: true,
@@ -109,10 +124,10 @@ export default defineNuxtConfig({
     },
     workbox: {
       navigateFallback: '/',
-  globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
-  globIgnores: ['**/opencv.js'],        
-  maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,  
-  runtimeCaching: [
+      globPatterns: ['**/*.{js,css,html,png,jpg,jpeg,svg,ico}'],
+      globIgnores: ['**/opencv.js'],
+      maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+      runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.supabase\.co\/storage\/v1\/render\/.*/i,
           handler: 'CacheFirst',
