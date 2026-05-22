@@ -7,7 +7,6 @@ export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig()
   const body = await readBody<InviteMemberPayload>(event)
 
-  // ── Validate input ──────────────────────────────────────────
   const { email, role, workspace_id } = body
 
   if (!email || !role || !workspace_id) {
@@ -18,8 +17,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Invalid role. Must be "admin" or "member".' })
   }
 
-  // ── Verify the caller is an admin or owner of this workspace ─────────
-  // We use the service-role key server-side to bypass RLS for this check
   const { createClient } = await import('@supabase/supabase-js')
   const adminClient = createClient(
     config.public.supabaseUrl,
@@ -37,7 +34,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 401, statusMessage: 'Invalid session' })
   }
 
-  // ── Fetch workspace details (name and owner) ──────────────────────
   const { data: workspace } = await adminClient
     .from('workspaces')
     .select('name, owner_id')
@@ -58,7 +54,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Only workspace admins can invite members.' })
   }
 
-  // ── Sign JWT invite token (72h expiry) ───────────────────────
   const inviteSecret = config.inviteSecret
   if (!inviteSecret) {
     throw createError({ statusCode: 500, statusMessage: 'Invite secret not configured.' })
@@ -73,10 +68,8 @@ export default defineEventHandler(async (event) => {
   const siteUrl = config.public.siteUrl ?? 'http://localhost:3000'
   const inviteUrl = `${siteUrl}/invite?token=${token}`
 
-  // ── Send invite email via Resend ────────────────────────────
   const resendApiKey = config.resendApiKey
   if (!resendApiKey) {
-    // Return the invite URL so the admin can share it manually during development
     console.warn('[Invite] RESEND_API_KEY not set. Returning invite URL directly.')
     return { success: true, inviteUrl, emailSent: false }
   }
@@ -112,7 +105,6 @@ export default defineEventHandler(async (event) => {
 
   if (emailErr) {
     console.error('[Invite] Email send failed:', emailErr)
-    // Still return the invite URL as fallback
     return { success: true, inviteUrl, emailSent: false, emailError: emailErr.message }
   }
 

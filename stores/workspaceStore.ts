@@ -63,7 +63,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       if (err) throw err
       workspaces.value = data ?? []
 
-   
       if (!currentWorkspace.value && workspaces.value.length > 0) {
       
         await selectWorkspace(workspaces.value[0]!.id)
@@ -92,7 +91,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     supabase
       .channel('workspace_changes')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'workspace_members', filter: `workspace_id=eq.${workspaceId}` }, (payload) => {
-        // If it's the current user themselves being added, ignore (they just accepted their own invite)
         if (payload.new.user_id !== _currentUserId.value) {
           const notifStore = useNotificationStore()
           notifStore.push({
@@ -129,7 +127,6 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
       if (err) throw err
 
-      // Auto-add creator as admin member
       await supabase.from('workspace_members').insert({
         workspace_id: data.id,
         user_id: _currentUserId.value,

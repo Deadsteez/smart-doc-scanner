@@ -19,7 +19,6 @@ export interface WorkspaceMember {
   role: WorkspaceRole
   invited_by: string | null
   joined_at: string
-  // Joined from auth.users via Supabase query
   email?: string
 }
 

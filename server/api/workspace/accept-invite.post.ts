@@ -17,7 +17,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Missing token or user_id' })
   }
 
-  // ── Verify and decode JWT ───────────────────────────────────
   const inviteSecret = config.inviteSecret
   if (!inviteSecret) {
     throw createError({ statusCode: 500, statusMessage: 'Server misconfiguration: invite secret missing.' })
@@ -35,14 +34,12 @@ export default defineEventHandler(async (event) => {
     })
   }
 
-  // ── Insert member using service-role (bypasses RLS for invite flow) ──
   const { createClient } = await import('@supabase/supabase-js')
   const adminClient = createClient(
     config.public.supabaseUrl,
     config.supabaseServiceRoleKey
   )
 
-  // Check if already a member
   const { data: existing } = await adminClient
     .from('workspace_members')
     .select('id')
@@ -51,11 +48,9 @@ export default defineEventHandler(async (event) => {
     .single()
 
   if (existing) {
-    // Already a member — just redirect to workspace (idempotent)
     return { success: true, workspace_id: payload.workspace_id, alreadyMember: true }
   }
 
-  // Insert the new member row
   const { error } = await adminClient.from('workspace_members').insert({
     workspace_id: payload.workspace_id,
     user_id: body.user_id,
