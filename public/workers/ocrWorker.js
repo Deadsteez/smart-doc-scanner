@@ -104,7 +104,6 @@ async function cropRegion(bitmap, crop, scale = 2) {
   const sw = Math.max(1, Math.floor(bitmap.width  * crop.width))
   const sh = Math.max(1, Math.floor(bitmap.height * crop.height))
 
- 
   const safeScale = Math.min(scale, 4096 / Math.max(sw, sh))
   const outW      = Math.max(1, Math.floor(sw * safeScale))
   const outH      = Math.max(1, Math.floor(sh * safeScale))
@@ -181,11 +180,9 @@ function normaliseOcrText(text) {
     .trim()
 }
 
-
 function normaliseAmountText(text) {
   let s = normaliseOcrText(text)
 
-  
   s = s.replace(/(?<!\d)\b2\s+(\d{2,4}(?:[,.]\d+)?)\b/g, '₹ $1')
 
   s = s.replace(/^2(\d{2,3})\b/gm, (match, digits) => {
@@ -213,7 +210,6 @@ function scoreAmountBandText(text, confidence) {
   let score = confidence
   if (/₹|\br(?=\d)|rs|inr|\$/i.test(text))                                          score += 24
   if (/\b\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?\b/.test(text))                          score += 18
-  // A line that is *only* a money amount scores very highly
   if (/^\s*(?:₹|r|rs|\$)?\s*(\d{1,3}(?:,\d{2,3})*(?:\.\d{1,2})?|\d{1,6}(?:\.\d{1,2})?)\s*$/i.test(text)) score += 28
   if (/total|amount|paid|invoice/i.test(text))                                        score += 4
   if (text.length <= 32)                                                               score += 6
@@ -238,16 +234,13 @@ function mergeTexts(texts) {
       const trimmed = line.trim()
       if (!trimmed) continue
 
-      // Filter ads immediately
       if (AD_KEYWORDS.test(trimmed)) continue
 
-      // Quality gate — at least 35% of chars must be "useful"
       const useful = (trimmed.match(
         /[a-zA-Z0-9$₹.,:#\-\/\u0900-\u097F\u0600-\u06FF]/g
       ) ?? []).length
       if (useful / trimmed.length < 0.35) continue
 
-      // Deduplication based on similarity (Jaccard > 0.65 or exact match)
       const isDuplicate = merged.some(m => {
         if (m.toLowerCase() === trimmed.toLowerCase()) return true
         if (trimmed.length > 10 && m.length > 10) {
@@ -278,7 +271,6 @@ function extractLikelyAmount(text) {
     }
   }
 
-  // Fall back to first currency-prefixed number
   const m = norm.match(/(?:₹|rs\.?|inr|\$)\s*([\d,]+(?:\.\d{1,2})?)/i)
   if (m) {
     const v = parseFloat(m[1].replace(/,/g, ''))
@@ -348,7 +340,6 @@ function getAmountBandCrops(docType) {
       ]
 
     case 'bank_statement':
-      // Balance column is typically right-aligned
       return [
         { x: 0.60, y: 0.18, width: 0.40, height: 0.65, scale: 3.5, label: 'stmt-amount-col'   },
         { x: 0.55, y: 0.75, width: 0.45, height: 0.12, scale: 5.0, label: 'stmt-amount-foot'  },
@@ -374,14 +365,12 @@ async function prepareBaseVariants(imageDataUrl) {
   const bitmap   = await loadBitmap(imageDataUrl)
   const variants = []
 
-  // 1. Full image — grayscale, contrast-boosted
   {
     const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
     grayscaleCanvas(canvas, { contrast: 1.45, invert: estimateLuminance(canvas) < 128 })
     variants.push({ label: 'full-grayscale', imageData: await canvasToDataUrl(canvas) })
   }
 
-  // 2. Full image — binarised (black/white)
   {
     const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
     const lum    = estimateLuminance(canvas)
@@ -389,21 +378,18 @@ async function prepareBaseVariants(imageDataUrl) {
     variants.push({ label: 'full-binary', imageData: await canvasToDataUrl(canvas) })
   }
 
-  // 3. Explicit invert — catches white-on-dark layouts
   {
     const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 1 }, 2)
     binariseCanvas(canvas, { invert: true, threshold: 120 })
     variants.push({ label: 'full-inverted', imageData: await canvasToDataUrl(canvas) })
   }
 
-  // 4. Top 55% — header / vendor / reference fields (extra upscale)
   {
     const canvas = await cropRegion(bitmap, { x: 0, y: 0, width: 1, height: 0.55 }, 2.6)
     binariseCanvas(canvas, { invert: estimateLuminance(canvas) < 128, threshold: 168 })
     variants.push({ label: 'top-binary', imageData: await canvasToDataUrl(canvas) })
   }
 
-  // 5. Bottom 50% — totals / footer row (extra upscale)
   {
     const canvas = await cropRegion(bitmap, { x: 0, y: 0.5, width: 1, height: 0.5 }, 2.6)
     binariseCanvas(canvas, { invert: estimateLuminance(canvas) < 128, threshold: 168 })
@@ -421,16 +407,13 @@ async function prepareDocumentRegionVariants(imageDataUrl, docType) {
   const variants = []
 
   for (const crop of crops) {
-    // Measure luminance from a 1× crop (cheap, unmodified)
     const lumCanvas = await cropRegion(bitmap, crop, 1)
     const lum       = estimateLuminance(lumCanvas)
 
-    // Binarised variant — fresh crop
     const bin = await cropRegion(bitmap, crop, crop.scale ?? 2)
     binariseCanvas(bin, { invert: lum < 150, threshold: lum < 150 ? 120 : 170 })
     variants.push({ label: `${crop.label}-binary`, imageData: await canvasToDataUrl(bin) })
 
-    // Dark backgrounds also get an explicit hard-invert variant
     if (lum < 150) {
       const inv = await cropRegion(bitmap, crop, crop.scale ?? 2)  // ← fresh crop
       binariseCanvas(inv, { invert: true, threshold: 126 })
@@ -449,21 +432,17 @@ async function prepareAmountBandVariants(imageDataUrl, docType) {
   const variants = []
 
   for (const band of bands) {
-    // Luminance sample from 1× — cheap
     const lumCanvas = await cropRegion(bitmap, band, 1)
     const lum       = estimateLuminance(lumCanvas)
 
-    // Grayscale high-contrast — fresh crop
     const gray = await cropRegion(bitmap, band, band.scale ?? 5)
     grayscaleCanvas(gray, { invert: lum < 160, contrast: 1.7 })
     variants.push({ label: `${band.label}-grayscale`, imageData: await canvasToDataUrl(gray) })
 
-    // Binary — fresh crop
     const bin = await cropRegion(bitmap, band, band.scale ?? 5)
     binariseCanvas(bin, { invert: lum < 160, threshold: lum < 160 ? 132 : 176 })
     variants.push({ label: `${band.label}-binary`, imageData: await canvasToDataUrl(bin) })
 
-    // Hard-invert — fresh crop (catches amounts on coloured badge backgrounds)
     const inv = await cropRegion(bitmap, band, band.scale ?? 5)
     binariseCanvas(inv, { invert: true, threshold: 132 })
     variants.push({ label: `${band.label}-inverted`, imageData: await canvasToDataUrl(inv) })
@@ -475,7 +454,6 @@ async function prepareAmountBandVariants(imageDataUrl, docType) {
 async function runVariants(sched, variants, mode = 'default', earlyExitFn) {
   const results = []
 
-  // Apply mode-specific Tesseract parameters before the loop
   if (workerRef) {
     await workerRef.setParameters(
       mode === 'amount' ? AMOUNT_PARAMS : DEFAULT_PARAMS
@@ -498,7 +476,6 @@ async function runVariants(sched, variants, mode = 'default', earlyExitFn) {
 
         results.push({ label: variant.label, text, confidence, score })
 
-       
         if (vi >= 1 && earlyExitFn && earlyExitFn(text, score)) {
           console.log(`[OCR Worker] Early exit triggered on variant: ${variant.label}`)
           break
@@ -508,7 +485,6 @@ async function runVariants(sched, variants, mode = 'default', earlyExitFn) {
       }
     }
   } finally {
-    // Always restore DEFAULT_PARAMS so subsequent passes aren't affected
     if (workerRef && mode === 'amount') {
       await workerRef.setParameters(DEFAULT_PARAMS)
     }
@@ -557,7 +533,6 @@ function scoreParsedAmountCandidate(result, bandIndex) {
   if (amount === null) return null
 
   let score = result.score
-  // Band position bonus: bands nearer to the expected total zone score higher
   score += Math.max(0, 20 - Math.abs((bandIndex ?? 3) - 3) * 4)
 
   if (exactLine)                                                                    score += 34
@@ -593,7 +568,6 @@ onmessage = async (e) => {
   try {
     const sched = await getScheduler(language)
 
-   
     if (mode === 'full') {
       postMessage({ type: 'progress', progress: 0.25, status: 'Preparing image variants...' })
 
@@ -616,7 +590,6 @@ onmessage = async (e) => {
           const lines   = rawBest?.data?.lines ?? []
           if (words.length > 0) {
             const filteredText = buildFilteredText(words, lines)
-            // Use whichever is more complete
             if (filteredText.length > 0 && filteredText.length > mergedText.length) {
               finalText = filteredText
             }
@@ -652,19 +625,16 @@ onmessage = async (e) => {
 
       postMessage({ type: 'progress', progress: 0.6, status: 'Running amount-band OCR...' })
 
-      // Amount-band pass — uses AMOUNT_PARAMS (FIX 1 lands here via runVariants)
       const amountResults = amountVariants.length
         ? await runVariants(sched, amountVariants, 'amount', (text, score) => {
             const norm         = normaliseAmountText(text)
             const hasCleanLine = norm.split('\n').some(l =>
               /^(?:₹|rs\.?|inr|\$)\s*\d[\d,]*(?:\.\d{1,2})?$/i.test(l.trim())
             )
-            // Early exit only after 2nd variant (FIX 4 is inside runVariants)
             return score >= 120 && extractLikelyAmount(norm) !== null && hasCleanLine
           })
         : []
 
-      // Score amount candidates and pick the best
       const amountCandidates = amountResults
         .map((r, i) => scoreParsedAmountCandidate(r, i))
         .filter(Boolean)
@@ -672,7 +642,6 @@ onmessage = async (e) => {
 
       const bestAmount = amountCandidates[0]?.amount ?? null
 
-      // Take the top-2 candidates that are within 18 points of the winner
       const amountTexts = bestAmount
         ? amountCandidates
             .filter(c => c.score >= (amountCandidates[0].score - 18))

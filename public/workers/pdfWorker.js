@@ -1,11 +1,8 @@
-// Converts PDF pages to images inside a dedicated worker for OCR pipeline
 console.log('[PDF Worker] Starting...')
 
-// load pdf.js worker-safe bundles
 importScripts('/pdfjs/pdf.worker.min.js')
 importScripts('/pdfjs/pdf.min.js')
 
-// Prevent nested worker creation
 if (typeof pdfjsLib !== 'undefined') {
   pdfjsLib.GlobalWorkerOptions.workerSrc = ''
 }
@@ -78,7 +75,6 @@ self.onmessage = async (e) => {
 
           context.clearRect(0, 0, canvas.width, canvas.height)
  
-
         await page.render({
           canvasContext: context,
           viewport
@@ -137,7 +133,6 @@ self.onmessage = async (e) => {
       successfulPages
     })
  
-
   } catch (err) {
     console.error('[PDF Worker] Error:', err)
     self.postMessage({

@@ -3,14 +3,11 @@ console.log('[Embedding Worker] Starting...')
 let embeddingPipeline = null
 let initPromise = null
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
-
 async function initializeWorker() {
   try {
     console.log('[Embedding Worker] Importing transformers...')
     const { pipeline, env } = await import('@xenova/transformers')
 
-    // Use locally cached model — no remote fetch
     env.localModelPath    = '/models/'
     env.cacheDir          = '/models/'
     env.allowLocalModels  = true
@@ -47,8 +44,6 @@ async function initializeWorker() {
 
 initPromise = initializeWorker()
 
-// ─── Message handler ──────────────────────────────────────────────────────────
-
 self.onmessage = async (e) => {
   const { text, id } = e.data
 
@@ -70,16 +65,13 @@ self.onmessage = async (e) => {
   }
 
   try {
-    // Truncate to 256 tokens (MiniLM max is 512 but 256 is faster and covers most docs)
     const truncated = text.slice(0, 1500)
 
-    // Run feature extraction — returns tensor [1, seq_len, 384]
     const output = await embeddingPipeline(truncated, {
       pooling: 'mean',
       normalize: true,   // L2-normalise → cosine similarity = dot product
     })
 
-    // Extract flat array of 384 floats
     const embedding = Array.from(output.data)
 
     postMessage({ type: 'result', id, embedding })

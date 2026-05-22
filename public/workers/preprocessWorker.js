@@ -28,7 +28,6 @@ async function waitForOpenCV() {
   })
 }
 
-
 function estimateLuminance(canvas) {
   const ctx = canvas.getContext('2d')
   const sw  = Math.min(80, canvas.width)
@@ -65,7 +64,6 @@ self.onmessage = async (e) => {
   }
 }
 
-
 async function preprocess(dataURL) {
   const res    = await fetch(dataURL)
   const blob   = await res.blob()
@@ -75,7 +73,6 @@ async function preprocess(dataURL) {
   const origH = bitmap.height
   console.log(`[Preprocess Worker] Input: ${origW}x${origH}`)
 
-  
   const TARGET_LONG_SIDE = 2400
   const scale  = Math.max(1.0, Math.min(TARGET_LONG_SIDE / Math.max(origW, origH), 2.0))
   const scaledW = Math.round(origW * scale)
@@ -85,7 +82,6 @@ async function preprocess(dataURL) {
   const ctx    = canvas.getContext('2d')
   ctx.drawImage(bitmap, 0, 0, scaledW, scaledH)
 
- 
   const luminance    = estimateLuminance(canvas)
   const isDarkBg     = luminance < 128
   console.log(`[Preprocess Worker] Luminance: ${luminance.toFixed(1)} isDarkBg:${isDarkBg}`)
@@ -105,22 +101,18 @@ async function preprocess(dataURL) {
     
     cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY)
 
-    // 2. Mild Gaussian blur to suppress sensor/JPEG noise
     cv.GaussianBlur(gray, denoised, new cv.Size(5, 5), 0)
 
-    // 3. Unsharp-mask sharpening (same 3×3 kernel as original)
     const kernel = cv.matFromArray(3, 3, cv.CV_32F, [0, -1, 0, -1, 5, -1, 0, -1, 0])
     cv.filter2D(denoised, sharpened, cv.CV_8U, kernel)
     kernel.delete()
 
-   
     let threshInput = sharpened
     if (isDarkBg) {
       cv.bitwise_not(sharpened, inverted)
       threshInput = inverted
     }
 
-    // 5. Adaptive threshold — handles uneven lighting / shadows on the page
     cv.adaptiveThreshold(
       threshInput,
       binary,
@@ -131,11 +123,9 @@ async function preprocess(dataURL) {
       10    // constant subtracted from mean
     )
 
-    // 6. Deskew
     self.postMessage({ type: 'progress', status: 'Deskewing...' })
     deskewed = deskewImage(binary)
 
-    // 7. Padding — white border so Tesseract doesn't clip text at edges
     const PADDING = 40
     padded = new cv.Mat()
     cv.copyMakeBorder(
@@ -146,7 +136,6 @@ async function preprocess(dataURL) {
       new cv.Scalar(255, 255, 255, 255)
     )
 
-    // 8. Convert grayscale Mat back to RGBA ImageData for OffscreenCanvas
     const finalW = padded.cols
     const finalH = padded.rows
     const outCanvas = new OffscreenCanvas(finalW, finalH)
@@ -182,7 +171,6 @@ async function preprocess(dataURL) {
   }
 }
 
-
 function deskewImage(binaryMat) {
   const MAX_SKEW_ANGLE = 15
   try {
@@ -201,7 +189,6 @@ function deskewImage(binaryMat) {
       return binaryMat.clone()
     }
 
-    // Sample at most 5000 points for speed
     const sampled = points.length > 5000
       ? points.filter((_, i) => i % Math.floor(points.length / 5000) === 0)
       : points
