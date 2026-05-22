@@ -1,7 +1,5 @@
 import type { ExtractedFields } from '~/services/db'
 
-// ─── Currency detection ───────────────────────────────────────────────────────
-
 const CURRENCY_PREFIX = /(?:RM|MYR|₹|Rs\.?|INR|\$|€|£|AED|SGD|AUD|CAD)\s*/i
 
 export function detectCurrency(text: string): string | undefined {
@@ -15,8 +13,6 @@ export function detectCurrency(text: string): string | undefined {
   return undefined
 }
 
-// ─── Date extraction ──────────────────────────────────────────────────────────
-
 const DATE_PATTERNS = [
   /\b(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})\b/,
   /\b(\d{4}-\d{2}-\d{2})\b/,
@@ -28,7 +24,6 @@ const DATE_PATTERNS = [
 ]
 
 export function extractDate(text: string): string | undefined {
-  // 1. Date-labelled extraction (highest precision)
   const labelled = text.match(
     /(?:\b(?:date|dated|invoice\s*date|receipt\s*date|bill\s*date|statement\s*date)\b|दिनांक|तारीख|दि\.)\s*[:\-]?\s*([\d\/\-\s]+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|जनवरी|फ़रवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|सितम्बर|अक्टूबर|नवंबर|नवम्बर|दिसंबर|दिसम्बर|जानेवारी|फेब्रुवारी|एप्रिल|मे|जुलै|ऑगस्ट|सप्टेंबर|ऑक्टोबर|नोव्हेंबर|डिसेंबर)?[\w\s,]*\d{2,4})/i
   )
@@ -39,7 +34,6 @@ export function extractDate(text: string): string | undefined {
     }
   }
 
-  // 2. Raw pattern scan
   for (const pat of DATE_PATTERNS) {
     const m = text.match(pat)
     if (m) return m[1]
@@ -48,31 +42,25 @@ export function extractDate(text: string): string | undefined {
   return undefined
 }
 
-// ─── Total / Amount extraction ────────────────────────────────────────────────
-
 const TOTAL_KEYWORDS =
   /(?:\b(?:grand\s*total|total\s*amount|amount\s*due|net\s*amount|amount\s*payable|payable|balance\s*due|total\s*payable|total\s*due|sub\s*total|subtotal|total)\b|कुल\s*योग|कुल\s*राशि|योग|देय\s*राशि|निवळ\s*रक्कम|एकूण\s*रक्कम|एकूण|कुल)/i
 
 export function extractTotal(text: string, lines: string[], docType?: string): { total: string | undefined; currency: string | undefined } {
   const ccy = detectCurrency(text)
 
-  // 0. Clean lines to exclude ad banners
   const AD_KEYWORDS = /(?:cashback|win\s+up\s+to|scratch\s+card|pay\s+via|powered\s+by|download\s+app|ad\b|sponsor)/i
   const cleanLines = lines.filter((l, i) => {
     if (AD_KEYWORDS.test(l)) return false
-    // Also skip amounts immediately following an ad banner (highly likely to be ad amount)
-    if (i > 0 && AD_KEYWORDS.test(lines[i - 1])) return false
+    if (i > 0 && AD_KEYWORDS.test(lines[i - 1] ?? '')) return false
     return true
   })
   
-  // Strategy 0: Semantic Utility Bill logic
   if (docType === 'utility_bill') {
     const utilityMatch = text.match(
       /(?:\b(?:bill\s*amount|payable\s*amount|net\s*bill|current\s*bill|amount\s*payable)\b)[^\d\n]{0,20}(?:RM|MYR|₹|Rs\.?|INR|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i
     )
     if (utilityMatch?.[1]) return { total: utilityMatch[1], currency: ccy }
     
-    // Fallback block if keyword is on previous line
     for (let i = 0; i < cleanLines.length - 1; i++) {
       const currentLine = cleanLines[i]
       const nextLine = cleanLines[i + 1]
@@ -83,13 +71,11 @@ export function extractTotal(text: string, lines: string[], docType?: string): {
     }
   }
 
-  // Strategy 1: Keyword + amount on same line
   const kwMatch = text.match(
     /(?:\b(?:grand\s*total|total\s*amount|amount\s*due|net\s*amount|amount\s*payable|payable|balance\s*due|total\s*payable|total\s*due|sub\s*total|subtotal|total)\b|कुल\s*योग|कुल\s*राशि|योग|देय\s*राशि|निवळ\s*रक्कम|एकूण\s*रक्कम|एकूण|कुल)[^\d\n]{0,20}(?:RM|MYR|₹|Rs\.?|INR|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i
   )
   if (kwMatch?.[1]) return { total: kwMatch[1], currency: ccy }
 
-  // Strategy 2: Keyword on one line, amount on next
   for (let i = 0; i < cleanLines.length - 1; i++) {
     const currentLine = cleanLines[i]
     const nextLine = cleanLines[i + 1]
@@ -101,11 +87,9 @@ export function extractTotal(text: string, lines: string[], docType?: string): {
     }
   }
 
-  // Strategy 3: Bare TOTAL + space + amount (common on thermal receipts)
   const bareTotal = text.match(/(?:\bTOTAL\b|कुल|एकूण)\s+(?:RM|MYR|₹|Rs\.?|\$|€|£)?\s*([\d,]+\.?\d{0,2})\b/i)
   if (bareTotal?.[1]) return { total: bareTotal[1], currency: ccy }
 
-  // Strategy 4: Largest currency-prefixed amount in bottom 40% of text
   const footerStart = Math.floor(cleanLines.length * 0.60)
   const footerText  = cleanLines.slice(footerStart).join('\n')
   const ccyAmounts  = [...footerText.matchAll(
@@ -124,7 +108,6 @@ export function extractTotal(text: string, lines: string[], docType?: string): {
     if (parsed.length > 0 && parsed[0]) return { total: parsed[0].raw, currency: ccy }
   }
 
-  // Strategy 5: Last standalone decimal in document
   const cleanText = cleanLines.join('\n')
   const allAmounts = [...cleanText.matchAll(/\b(\d{1,6}(?:[,\s]\d{2,3})*\.\d{2})\b/g)]
   if (allAmounts.length > 0) {
@@ -138,8 +121,6 @@ export function extractTotal(text: string, lines: string[], docType?: string): {
 
   return { total: undefined, currency: ccy }
 }
-
-// ─── Vendor extraction ────────────────────────────────────────────────────────
 
 const ADDRESS_NOISE   = /\b(\d+\s+(jalan|lorong|persiaran|taman|street|road|ave|avenue|blvd|lane|way|dr|drive|st\.?))/i
 const BUSINESS_SUFFIX = /(?:\b(?:sdn\s*bhd|bhd|pvt\.?\s*ltd|ltd|llc|inc|corp|co\.|plc|llp|gmbh)\b|लिमिटेड|लि\.?|लॉजिस्टिक|मार्ट|एंटरप्राइजेज|स्टोर्स|दुकान|व्यापारी|ब्रदर्स|प्रााइवेट|प्रा\s*लिमिटेड)/i
@@ -174,15 +155,11 @@ function scoreVendorLine(line: string, idx: number): number {
   return score
 }
 
-// ─── Tax extraction ───────────────────────────────────────────────────────────
-
 export function extractTax(text: string): string | undefined {
   return text.match(
     /(?:\b(?:tax|gst|vat|hst|pst|sst|service\s*tax|igst|cgst|sgst|cess)\b|कर|सेवा\s*कर|जीएसटी)[^0-9\n]{0,20}(?:RM|₹|Rs\.?|\$|€|£)?\s*([\d,]+\.?\d{0,2})/i
   )?.[1]
 }
-
-// ─── Reference number ─────────────────────────────────────────────────────────
 
 export function extractReferenceNumber(text: string): string | undefined {
   const utr = text.match(/\b(?:UTR|RRN)\s*[:\-]?\s*([0-9]{12})\b/i)?.[1]
@@ -202,15 +179,11 @@ export function extractReferenceNumber(text: string): string | undefined {
   return undefined
 }
 
-// ─── Payment method ───────────────────────────────────────────────────────────
-
 export function extractPaymentMethod(text: string): string | undefined {
   return text.match(
     /(?:\b(?:cash|visa|mastercard|master\s*card|amex|american\s*express|discover|rupay|debit\s*card|credit\s*card|upi|neft|rtgs|imps|cheque|check|net\s*banking|phonepe|gpay|google\s*pay|paytm|bhim|wang\s*tunai)\b|नकद|रोख|कार्ड|चेक)/i
   )?.[1]
 }
-
-// ─── Line items ───────────────────────────────────────────────────────────────
 
 function extractLineItems(lines: string[]): { description: string; amount: string }[] {
   const items: { description: string; amount: string }[] = []
@@ -236,8 +209,6 @@ function extractLineItems(lines: string[]): { description: string; amount: strin
 
   return items
 }
-
-// ─── Main exported function ───────────────────────────────────────────────────
 
 export function extractFields(text: string, docType?: string): ExtractedFields {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean)

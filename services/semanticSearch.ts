@@ -1,8 +1,5 @@
 import type { DocumentRecord } from '~/services/db'
 
-// ─── Cosine similarity ────────────────────────────────────────────────────────
-// Since MiniLM embeddings are L2-normalised, cosine similarity = dot product.
-
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0
   let dot = 0
@@ -10,15 +7,12 @@ export function cosineSimilarity(a: number[], b: number[]): number {
   return dot   // already normalised, so result is in [-1, 1]
 }
 
-// ─── Result type ──────────────────────────────────────────────────────────────
-
 export interface SemanticSearchResult {
   doc:        DocumentRecord
   score:      number   // cosine similarity [0, 1]
   rank:       number
 }
 
-// ─── Semantic search ──────────────────────────────────────────────────────────
 /**
  * Rank documents by semantic similarity to a query embedding.
  * Documents without stored embeddings are included at the bottom with score=0
@@ -38,7 +32,6 @@ export function semanticSearch(
     rank: 0,
   }))
 
-  // Sort: semantic matches first, then unembedded docs by recency
   scored.sort((a, b) => {
     if (a.score >= 0 && b.score >= 0) return b.score - a.score
     if (a.score < 0 && b.score >= 0) return 1
@@ -52,7 +45,6 @@ export function semanticSearch(
     .map((r, i) => ({ ...r, rank: i + 1 }))
 }
 
-// ─── Semantic duplicate detection ────────────────────────────────────────────
 /**
  * Find documents that are semantically similar to a given embedding.
  * Uses a high threshold (>0.92) to detect likely duplicates.
@@ -68,7 +60,6 @@ export function findSemanticDuplicates(
   )
 }
 
-// ─── Keyword+semantic hybrid filter ──────────────────────────────────────────
 /**
  * Combine keyword filter with semantic ranking.
  * Keyword filter is applied first (hard constraint), then results are

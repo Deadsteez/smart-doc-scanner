@@ -15,7 +15,6 @@ export interface ExtractedFields {
   receiptNumber?: string
   paymentMethod?: string
   items?: LineItem[]
-  // Category-specific extras (stored flat for DB simplicity)
   invoiceNumber?: string
   gstin?: string
   poNumber?: string
@@ -67,7 +66,6 @@ export interface DocumentRecord {
   extracted: ExtractedFields
   category: DocumentCategory
   synced: boolean
-  // ── Semantic AI fields ────────────────────────────────────────────────────
   embedding?: number[]           // 384-dim MiniLM vector (L2-normalised)
   expenseCategory?: string       // 'food' | 'fuel' | 'transport' | 'utilities' | etc.
   semanticTags?: string[]        // ['gst-invoice', 'recurring', 'subscription', ...]

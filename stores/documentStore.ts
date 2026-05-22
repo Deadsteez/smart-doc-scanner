@@ -23,7 +23,10 @@ export const useDocumentStore = defineStore('documents', () => {
   }
 
   async function reloadLocal() {
-    documents.value = await db.documents.toArray()
+    documents.value = await db.documents
+      .orderBy('createdAt')
+      .reverse()
+      .toArray()
   }
 
   async function loadAll() {
@@ -38,7 +41,7 @@ export const useDocumentStore = defineStore('documents', () => {
       const { data, error } = await supabase
         .from('documents')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', userId)                       // explicit user filter (v2)
         .order('created_at', { ascending: false })
 
       if (error) {
@@ -51,56 +54,49 @@ export const useDocumentStore = defineStore('documents', () => {
         const exists = await db.documents
           .where('supabaseId').equals(row.id).first()
 
+        const categoryScores = row.category_scores ?? {
+          invoice:       0,
+          receipt:       0,
+          bank_statement: 0,
+          payment_slip:  0,
+          utility_bill:  0,
+          tax_document:  0,
+          contract:      0,
+          other:         0,
+        }
+
+        const mappedRecord = {
+          supabaseId:  row.id,
+          userId:      row.user_id,
+          workspaceId: row.workspace_id ?? undefined,
+          createdAt:   row.created_at,
+          image:       row.image,
+          ocrText:     row.ocr_text    ?? '',
+          cleanedText: row.cleaned_text ?? '',
+          extracted: {
+            vendor:        row.vendor,
+            date:          row.date,
+            total:         row.total,
+            tax:           row.tax,
+            receiptNumber: row.receipt_number,
+            paymentMethod: row.payment_method,
+            items:         row.items ?? [],
+          },
+          category: {
+            type:       row.category    ?? 'other',
+            nlpLabel:   row.nlp_label,
+            confidence: row.category_confidence ?? 0,
+            scores:     categoryScores,
+          },
+          synced: true,
+        }
+
         if (!exists) {
-          await db.documents.add({
-            supabaseId:   row.id,
-            userId:       row.user_id,
-            workspaceId:  row.workspace_id ?? undefined,
-            createdAt:    row.created_at,
-            image:        row.image,
-            ocrText:      row.ocr_text ?? '',
-            cleanedText:  row.cleaned_text ?? '',
-            extracted: {
-              vendor:        row.vendor,
-              date:          row.date,
-              total:         row.total,
-              tax:           row.tax,
-              receiptNumber: row.receipt_number,
-              paymentMethod: row.payment_method,
-              items:         row.items ?? [],
-            },
-            category: {
-              type:       row.category ?? 'other',
-              nlpLabel:   row.nlp_label,
-              confidence: row.category_confidence ?? 0,
-              scores:     row.category_scores ?? { invoice: 0, receipt: 0, bank_statement: 0, payment_slip: 0, utility_bill: 0, tax_document: 0, contract: 0, other: 0 },
-            },
-            synced: true,
-          })
+          await db.documents.add(mappedRecord)
         } else if (!exists.synced) {
-          // Local unsynced record takes priority — leave it for syncPending
         } else {
-          await db.documents.update(exists.id!, {
-            image:       row.image,
-            ocrText:     row.ocr_text ?? '',
-            cleanedText: row.cleaned_text ?? '',
-            extracted: {
-              vendor:        row.vendor,
-              date:          row.date,
-              total:         row.total,
-              tax:           row.tax,
-              receiptNumber: row.receipt_number,
-              paymentMethod: row.payment_method,
-              items:         row.items ?? [],
-            },
-            category: {
-              type:       row.category ?? 'other',
-              nlpLabel:   row.nlp_label,
-              confidence: row.category_confidence ?? 0,
-              scores:     row.category_scores ?? { invoice: 0, receipt: 0, bank_statement: 0, payment_slip: 0, utility_bill: 0, tax_document: 0, contract: 0, other: 0 },
-            },
-            synced: true,
-          })
+          const { supabaseId: _, userId: __, workspaceId: ___, createdAt: ____, ...patch } = mappedRecord
+          await db.documents.update(exists.id!, { ...patch, synced: true })
         }
       }
 
@@ -125,7 +121,6 @@ export const useDocumentStore = defineStore('documents', () => {
     lastId.value = localId
     await reloadLocal()
 
-    // ── Semantic enrichment (non-blocking — runs in background) ────────────
     enrichDocumentAsync(localId, doc.cleanedText, doc.extracted?.vendor).catch(() => {})
 
     if (userId) {
@@ -158,6 +153,7 @@ export const useDocumentStore = defineStore('documents', () => {
         const blob = await (await fetch(record.image)).blob()
         const ext  = blob.type.split('/')[1] ?? 'jpg'
         const path = `${userId}/${localId}.${ext}`
+
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('document-images')
           .upload(path, blob, { upsert: true, contentType: blob.type })
@@ -176,7 +172,7 @@ export const useDocumentStore = defineStore('documents', () => {
 
       const payload = {
         user_id:             userId,
-        workspace_id:        record.workspaceId ?? null,
+        workspace_id:        record.workspaceId        ?? null,
         created_at:          record.createdAt,
         image:               imageUrl,
         ocr_text:            record.ocrText,
@@ -265,6 +261,7 @@ export const useDocumentStore = defineStore('documents', () => {
     if (record?.supabaseId) {
       try {
         const supabase = getSupabase()
+
         const { error } = await supabase
           .from('documents')
           .delete()
@@ -295,6 +292,54 @@ export const useDocumentStore = defineStore('documents', () => {
     await reloadLocal()
   }
 
+  async function removeBySupabaseId(supabaseId: string, workspaceId?: string): Promise<boolean> {
+    const supabase = getSupabase()
+
+    const localDocs = await db.documents
+      .filter(d => d.supabaseId === supabaseId)
+      .toArray()
+    const record = localDocs[0]
+
+    try {
+
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', supabaseId)
+
+      if (error) {
+        console.error('[Store] Remote delete failed:', error.message)
+        return false
+      }
+
+      if (record?.image && !record.image.startsWith('data:')) {
+        const path = record.image.split('/document-images/')[1]
+        if (path) {
+          const { error: storageError } = await supabase.storage
+            .from('document-images')
+            .remove([path])
+          if (storageError) {
+            console.warn('[Store] Image delete failed:', storageError.message)
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[Store] removeBySupabaseId error:', err)
+      return false
+    }
+
+    if (record?.id) {
+      await db.documents.delete(record.id)
+    } else {
+      documents.value = documents.value.filter(
+        d => (d as any).supabaseId !== supabaseId
+      )
+    }
+
+    await reloadLocal()
+    return true
+  }
+
   const sortedDocuments = computed(() =>
     [...documents.value].sort((a, b) => b.createdAt - a.createdAt)
   )
@@ -314,6 +359,7 @@ export const useDocumentStore = defineStore('documents', () => {
     add,
     update,
     remove,
+    removeBySupabaseId,
     syncPending,
   }
 })
