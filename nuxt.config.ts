@@ -1,5 +1,6 @@
 import { defineNuxtConfig } from 'nuxt/config'
 
+
 export default defineNuxtConfig({
   devtools: { enabled: process.env.NODE_ENV === 'development' },
   modules: ['@nuxtjs/tailwindcss', '@nuxtjs/color-mode', '@pinia/nuxt', '@vite-pwa/nuxt', 'nuxt-security'],
