@@ -7,6 +7,8 @@ import { usePdfProcessor } from '~/composables/usePdfProcessor'
 import PdfUploader from '~/components/scanner/PdfUploader.vue'
 import NlpWorker from '~/workers/nlpWorker.js?worker'
 import LanguageSelector from '~/components/LanguageSelector.vue'
+import { getCategoryLabel } from '~/composables/useDocumentClassifier'
+import { getVendorSemantic, EXPENSE_CATEGORY_LABELS } from '~/services/vendorIntelligence'
 
 const videoEl = ref(null)
 const fileInputEl = ref(null)
@@ -19,12 +21,25 @@ const ocrProgress = ref(0)
 const ocrConfidence = ref(null)
 const selectedLanguage = ref('eng+hin+mar')
 
+// Interactive Preprocessing state variables
+const rotation = ref(0)
+const brightness = ref(0)
+const contrast = ref(1.0)
+const cropX = ref(10)
+const cropY = ref(10)
+const cropW = ref(80)
+const cropH = ref(80)
+const isEditing = ref(false)
+const activeDrag = ref(null)
+const cropImageEl = ref(null)
+
 const cameraError = ref(null)
 const captureError = ref(null)
 const isSaving = ref(false)
 const isSaved = ref(false)
 const saveError = ref(null)
 const nlpStatus = ref(null)
+const smartSuggestions = ref([])
 
 const showPdfUploader = ref(false)
 const pdfPages = ref([])
@@ -295,7 +310,7 @@ function processNextPdfPage() {
 }
 
 
-function processImage(dataUrl) {
+function processImage(dataUrl, skipEdit = false) {
   capturedImage.value        = dataUrl
   processedImage.value       = null
   ocrText.value              = null
@@ -305,7 +320,206 @@ function processImage(dataUrl) {
   isSaved.value              = false
   saveError.value            = null
   captureError.value         = null
-  preprocessWorker.postMessage({ imageDataURL: dataUrl })
+
+  if (skipEdit) {
+    isEditing.value = false
+    preprocessWorker.postMessage({ imageDataURL: dataUrl })
+  } else {
+    // Reset adjustments for a new capture/upload
+    brightness.value = 0
+    contrast.value = 1.0
+    rotation.value = 0
+    cropX.value = 10
+    cropY.value = 10
+    cropW.value = 80
+    cropH.value = 80
+    isEditing.value = true
+  }
+}
+
+// Drag & Drop Crop box logic
+let startX = 0
+let startY = 0
+let startCropX = 0
+let startCropY = 0
+let startCropW = 0
+let startCropH = 0
+
+function onCropImageLoad() {
+  // Triggers measurement when needed
+}
+
+function startDrag(event, handle) {
+  event.preventDefault()
+  activeDrag.value = handle
+  
+  const clientX = event.touches ? event.touches[0].clientX : event.clientX
+  const clientY = event.touches ? event.touches[0].clientY : event.clientY
+  
+  startX = clientX
+  startY = clientY
+  
+  startCropX = cropX.value
+  startCropY = cropY.value
+  startCropW = cropW.value
+  startCropH = cropH.value
+  
+  window.addEventListener('mousemove', onDrag)
+  window.addEventListener('touchmove', onDrag, { passive: false })
+  window.addEventListener('mouseup', endDrag)
+  window.addEventListener('touchend', endDrag)
+}
+
+function onDrag(event) {
+  if (!activeDrag.value || !cropImageEl.value) return
+  event.preventDefault()
+  
+  const clientX = event.touches ? event.touches[0].clientX : event.clientX
+  const clientY = event.touches ? event.touches[0].clientY : event.clientY
+  
+  const deltaX = clientX - startX
+  const deltaY = clientY - startY
+  
+  const imgW = cropImageEl.value.clientWidth
+  const imgH = cropImageEl.value.clientHeight
+  if (!imgW || !imgH) return
+  
+  const pctDeltaX = (deltaX / imgW) * 100
+  const pctDeltaY = (deltaY / imgH) * 100
+  
+  if (activeDrag.value === 'move') {
+    let newX = startCropX + pctDeltaX
+    let newY = startCropY + pctDeltaY
+    
+    if (newX < 0) newX = 0
+    if (newY < 0) newY = 0
+    if (newX + startCropW > 100) newX = 100 - startCropW
+    if (newY + startCropH > 100) newY = 100 - startCropH
+    
+    cropX.value = Math.round(newX)
+    cropY.value = Math.round(newY)
+  } else {
+    let newX = startCropX
+    let newY = startCropY
+    let newW = startCropW
+    let newH = startCropH
+    
+    const minSize = 10
+    
+    if (activeDrag.value.includes('left')) {
+      const maxX = startCropX + startCropW - minSize
+      let targetX = startCropX + pctDeltaX
+      targetX = Math.max(0, Math.min(targetX, maxX))
+      newW = startCropX + startCropW - targetX
+      newX = targetX
+    } else if (activeDrag.value.includes('right')) {
+      let targetW = startCropW + pctDeltaX
+      targetW = Math.max(minSize, Math.min(targetW, 100 - startCropX))
+      newW = targetW
+    }
+    
+    if (activeDrag.value.includes('top')) {
+      const maxY = startCropY + startCropH - minSize
+      let targetY = startCropY + pctDeltaY
+      targetY = Math.max(0, Math.min(targetY, maxY))
+      newH = startCropY + startCropH - targetY
+      newY = targetY
+    } else if (activeDrag.value.includes('bottom')) {
+      let targetH = startCropH + pctDeltaY
+      targetH = Math.max(minSize, Math.min(targetH, 100 - startCropY))
+      newH = targetH
+    }
+    
+    cropX.value = Math.round(newX)
+    cropY.value = Math.round(newY)
+    cropW.value = Math.round(newW)
+    cropH.value = Math.round(newH)
+  }
+}
+
+function endDrag() {
+  activeDrag.value = null
+  window.removeEventListener('mousemove', onDrag)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('mouseup', endDrag)
+  window.removeEventListener('touchend', endDrag)
+}
+
+function rotateCapturedImage(clockwise = true) {
+  if (!capturedImage.value) return
+  
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    canvas.width = img.height
+    canvas.height = img.width
+    
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((clockwise ? 90 : -90) * Math.PI / 180)
+    ctx.drawImage(img, -img.width / 2, -img.height / 2)
+    
+    capturedImage.value = canvas.toDataURL('image/jpeg', 0.95)
+    
+    // Reset crop bounds on rotate
+    cropX.value = 10
+    cropY.value = 10
+    cropW.value = 80
+    cropH.value = 80
+  }
+  img.src = capturedImage.value
+}
+
+function resetAdjustments() {
+  brightness.value = 0
+  contrast.value = 1.0
+  cropX.value = 10
+  cropY.value = 10
+  cropW.value = 80
+  cropH.value = 80
+}
+
+function applyAdjustments() {
+  if (!capturedImage.value) return
+  
+  isSaving.value = true
+  saveError.value = null
+  
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')
+    
+    const srcX = (cropX.value / 100) * img.width
+    const srcY = (cropY.value / 100) * img.height
+    const srcW = (cropW.value / 100) * img.width
+    const srcH = (cropH.value / 100) * img.height
+    
+    canvas.width = srcW
+    canvas.height = srcH
+    
+    ctx.filter = `brightness(${100 + brightness.value}%) contrast(${contrast.value})`
+    
+    ctx.drawImage(
+      img,
+      srcX, srcY, srcW, srcH,
+      0, 0, srcW, srcH
+    )
+    
+    const finalDataUrl = canvas.toDataURL('image/jpeg', 0.95)
+    
+    isEditing.value = false
+    isSaving.value = false
+    
+    processImage(finalDataUrl, true)
+  }
+  img.onerror = (err) => {
+    console.error('Error applying adjustments:', err)
+    saveError.value = 'Failed to process image adjustments'
+    isSaving.value = false
+  }
+  img.src = capturedImage.value
 }
 
 function runOCR() {
@@ -465,6 +679,7 @@ async function saveDocumentWithNlp(cleanedText, extracted, category, isRefinemen
         synced:      false,
       })
       documentStore.lastId = id
+      generateSmartSuggestions(extracted, category, cleanedText)
     }
     isSaved.value = true
   } catch (err) {
@@ -480,8 +695,8 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
   try {
     const { extractFields }    = await import('~/services/extractFields')
     const { classifyDocument } = await import('~/composables/useDocumentClassifier')
-    const extracted = extractFields(cleanedText)
     const category  = classifyDocument(cleanedText, cvFeatures)
+    const extracted = extractFields(cleanedText, category.type)
 
     await documentStore.add({
       createdAt:   Date.now(),
@@ -492,6 +707,8 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
       category,
       synced:      false,
     })
+    documentStore.lastId = id
+    generateSmartSuggestions(extracted, category, cleanedText)
     isSaved.value = true
   } catch (err) {
     saveError.value = 'Failed to save: ' + err.message
@@ -499,6 +716,31 @@ async function saveDocumentFallback(cleanedText, cvFeatures) {
     isSaving.value  = false
     nlpStatus.value = null
   }
+}
+
+function generateSmartSuggestions(extracted, category, text) {
+  const suggestions = []
+  
+  if (category?.type && category.type !== 'other') {
+    suggestions.push(`Categorized as: ${getCategoryLabel(category.type)}`)
+  }
+
+  if (extracted?.vendor) {
+    const semantic = getVendorSemantic(extracted.vendor, text)
+    if (semantic) {
+      suggestions.push(`Detected ${semantic} vendor`)
+    }
+
+    const pastCount = documentStore.documents.filter(d => 
+      (d.extracted?.vendor || '').toLowerCase() === extracted.vendor.toLowerCase()
+    ).length
+
+    if (pastCount > 1) {
+      suggestions.push(`Recurring vendor: you have ${pastCount} documents from ${extracted.vendor}`)
+    }
+  }
+
+  smartSuggestions.value = suggestions
 }
 
 function clearImages() {
@@ -512,6 +754,7 @@ function clearImages() {
   isSaved.value             = false
   saveError.value           = null
   captureError.value        = null
+  smartSuggestions.value    = []
   pdfPages.value            = []
   currentPdfPageIndex.value = 0
   showPdfUploader.value     = false
@@ -636,13 +879,188 @@ async function toggleCamera() {
         : (nlpStatus ?? 'Saving document and syncing to cloud…') }}
     </div>
 
-    <div v-if="capturedImage" class="bg-bg-secondary border-slate-1/50 rounded-xl p-4 shadow-card">
-      <div class="flex justify-between items-center mb-3">
-        <p class="text-text-secondary text-sm font-medium">Original</p>
-        <button class="text-red-500 hover:text-red-400 transition text-lg" title="Clear image"
-          @click="clearImages">🗑️</button>
+    <div v-if="capturedImage" class="bg-bg-secondary border border-slate-700/50 rounded-2xl p-5 shadow-card space-y-5">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🎨</span>
+          <p class="text-text-primary font-semibold text-sm">
+            {{ isEditing ? 'Edit & Crop Document' : 'Original Snapshot' }}
+          </p>
+        </div>
+        <button class="text-error hover:text-red-400 transition-colors text-sm font-medium flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-error/10" title="Clear image"
+          @click="clearImages">
+          <span>🗑️</span> Clear
+        </button>
       </div>
-      <img :src="capturedImage" class="rounded-lg shadow max-h-[300px] mx-auto block" />
+
+      <!-- Editing / Adjustments Active Workspace -->
+      <div v-if="isEditing" class="space-y-5">
+        <!-- Interactive Crop Area -->
+        <div class="relative bg-bg-primary rounded-xl overflow-hidden p-2 flex items-center justify-center min-h-[260px] border border-slate-800/80 shadow-inner">
+          <div class="relative max-w-full select-none overflow-hidden touch-none" style="width: fit-content;">
+            <img
+              ref="cropImageEl"
+              :src="capturedImage"
+              :style="{
+                filter: `brightness(${100 + brightness}%) contrast(${contrast})`,
+                maxHeight: '360px',
+                display: 'block'
+              }"
+              class="rounded-lg shadow-md max-w-full select-none pointer-events-none"
+              @load="onCropImageLoad"
+            />
+
+            <!-- Rectangular Crop Overlay Box -->
+            <div
+              class="absolute border-2 border-dashed border-accent-primary bg-accent-primary/10 shadow-[0_0_0_9999px_rgba(0,0,0,0.5)] cursor-move select-none"
+              :style="{
+                left: `${cropX}%`,
+                top: `${cropY}%`,
+                width: `${cropW}%`,
+                height: `${cropH}%`
+              }"
+              @mousedown="startDrag($event, 'move')"
+              @touchstart="startDrag($event, 'move')"
+            >
+              <!-- Drag Handles -->
+              <div
+                class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -top-2.5 -left-2.5 cursor-nwse-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
+                @mousedown.stop="startDrag($event, 'top-left')"
+                @touchstart.stop="startDrag($event, 'top-left')"
+              >
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+              <div
+                class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -top-2.5 -right-2.5 cursor-nesw-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
+                @mousedown.stop="startDrag($event, 'top-right')"
+                @touchstart.stop="startDrag($event, 'top-right')"
+              >
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+              <div
+                class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -bottom-2.5 -left-2.5 cursor-nesw-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
+                @mousedown.stop="startDrag($event, 'bottom-left')"
+                @touchstart.stop="startDrag($event, 'bottom-left')"
+              >
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+              <div
+                class="absolute w-5 h-5 bg-accent-primary border-[3px] border-white rounded-full -bottom-2.5 -right-2.5 cursor-nwse-resize shadow-md active:scale-125 transition-transform duration-100 flex items-center justify-center"
+                @mousedown.stop="startDrag($event, 'bottom-right')"
+                @touchstart.stop="startDrag($event, 'bottom-right')"
+              >
+                <div class="w-1.5 h-1.5 bg-white rounded-full"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preprocessing Control Sliders and Rotator -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-bg-tertiary/50 p-4 rounded-xl border border-slate-700/30">
+          
+          <!-- Slider Box -->
+          <div class="space-y-4">
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-text-secondary">
+                <span>💡 BRIGHTNESS</span>
+                <span class="text-accent-primary">{{ brightness > 0 ? `+${brightness}` : brightness }}%</span>
+              </div>
+              <input
+                type="range"
+                v-model.number="brightness"
+                min="-60"
+                max="60"
+                step="1"
+                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50"
+              />
+            </div>
+            
+            <div class="space-y-1.5">
+              <div class="flex justify-between text-xs font-semibold text-text-secondary">
+                <span>🌗 CONTRAST</span>
+                <span class="text-accent-primary">{{ Math.round(contrast * 100) }}%</span>
+              </div>
+              <input
+                type="range"
+                v-model.number="contrast"
+                min="0.5"
+                max="2.0"
+                step="0.05"
+                class="w-full h-1.5 bg-bg-primary rounded-lg appearance-none cursor-pointer accent-accent-primary border border-slate-700/50"
+              />
+            </div>
+          </div>
+
+          <!-- Rotation and Reset -->
+          <div class="flex flex-col justify-center space-y-4">
+            <div class="space-y-1.5">
+              <span class="text-xs font-semibold text-text-secondary block">🔄 ROTATION (90° STEPS)</span>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  @click="rotateCapturedImage(false)"
+                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  ↩️ Rotate Left
+                </button>
+                <button
+                  type="button"
+                  @click="rotateCapturedImage(true)"
+                  class="flex-1 bg-bg-primary border border-slate-700/50 hover:bg-bg-elevated text-text-secondary px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
+                >
+                  ↪️ Rotate Right
+                </button>
+              </div>
+            </div>
+
+            <div class="flex gap-2 pt-1.5">
+              <button
+                type="button"
+                @click="resetAdjustments"
+                class="w-full bg-error/10 hover:bg-error/20 text-error border border-error/20 px-3.5 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center justify-center gap-1.5"
+              >
+                🧹 Reset Edits
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button
+            type="button"
+            @click="applyAdjustments"
+            class="flex-1 bg-accent-secondary hover:bg-teal-500 active:scale-95 text-white font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 shadow-glow-teal hover:-translate-y-0.5 hover:shadow-[0_0_20px_rgba(20,184,166,0.3)]"
+          >
+            ✅ Apply & Enhance
+          </button>
+          <button
+            type="button"
+            @click="processImage(capturedImage, true)"
+            class="flex-1 bg-bg-tertiary hover:bg-bg-elevated active:scale-95 text-text-secondary font-semibold px-5 py-3 rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-slate-700 hover:-translate-y-0.5"
+          >
+            ⚡ Skip & Auto-Enhance
+          </button>
+        </div>
+      </div>
+
+      <!-- Passive Preview -->
+      <div v-else class="space-y-4">
+        <img
+          :src="capturedImage"
+          class="rounded-xl shadow-md max-h-[300px] mx-auto block border border-slate-800"
+        />
+        <div class="flex justify-center">
+          <button
+            type="button"
+            @click="isEditing = true"
+            class="bg-bg-tertiary border border-slate-700/80 hover:bg-bg-elevated text-text-secondary px-4 py-2 rounded-lg transition-all active:scale-95 text-xs font-semibold flex items-center gap-1.5"
+          >
+            ✏️ Adjust Image & Re-crop
+          </button>
+        </div>
+      </div>
     </div>
 
     <div v-if="processedImage" class="bg-bg-secondary border-slate-1/50 rounded-xl p-4 shadow-card">
@@ -713,6 +1131,16 @@ async function toggleCamera() {
       <NuxtLink to="/dashboard" class="ml-auto text-success hover:underline font-semibold text-sm whitespace-nowrap">
         View Dashboard →
       </NuxtLink>
+    </div>
+
+    <!-- Smart Suggestions -->
+    <div v-if="isSaved && smartSuggestions.length > 0" class="space-y-2 mt-4">
+      <div v-for="(suggestion, i) in smartSuggestions" :key="i"
+        class="bg-bg-secondary border border-accent-primary/20 p-3 rounded-xl flex items-center gap-2.5 shadow-card animate-fade-in"
+        :style="{ animationDelay: `${i * 100}ms` }">
+        <span class="text-accent-primary text-base">💡</span>
+        <span class="text-text-secondary text-sm font-medium">{{ suggestion }}</span>
+      </div>
     </div>
 
     <div v-if="documentStore?.syncing"
