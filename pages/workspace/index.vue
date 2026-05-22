@@ -15,6 +15,9 @@ const { isAdmin } = usePermissions()
 const selectedDocId = ref<string | null>(null)
 const showModal = ref(false)
 
+// ── Filter state ──────────────────────────────────────────
+const selectedCategory = ref('all')
+
 onMounted(async () => {
   document.addEventListener('click', closeDropdown)
   await documentStore.loadAll()
@@ -49,10 +52,17 @@ function closeDropdown(e: Event) {
   }
 }
 
-const workspaceDocuments = computed(() => {
+const allWorkspaceDocuments = computed(() => {
   if (!workspaceStore.currentWorkspace) return []
   return documentStore.documents.filter(
     d => d.workspaceId === workspaceStore.currentWorkspace?.id
+  )
+})
+
+const workspaceDocuments = computed(() => {
+  if (selectedCategory.value === 'all') return allWorkspaceDocuments.value
+  return allWorkspaceDocuments.value.filter(
+    doc => doc.category?.type === selectedCategory.value
   )
 })
 
@@ -182,16 +192,42 @@ function categoryClass(category: any) {
 
     <!-- Document list with approval status -->
     <template v-else>
-      <div v-if="workspaceDocuments.length === 0" class="text-center py-14 text-text-muted">
+
+      <!-- Category filter pills -->
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button
+          v-for="cat in ['all', 'receipt', 'invoice', 'bill', 'other']"
+          :key="cat"
+          @click="selectedCategory = cat"
+          class="px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all"
+          :class="selectedCategory === cat
+            ? 'bg-accent-primary text-white shadow-[0_2px_8px_rgba(14,165,233,0.25)]'
+            : 'bg-bg-tertiary text-text-muted hover:text-text-secondary hover:bg-bg-elevated'"
+        >
+          {{ cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1) }}
+        </button>
+      </div>
+
+      <!-- Empty state -->
+      <div v-if="allWorkspaceDocuments.length === 0" class="text-center py-14 text-text-muted">
         <p class="text-sm">No documents in this workspace yet.</p>
         <p class="text-xs mt-1 text-text-muted/60">Scan documents and submit them for approval here.</p>
       </div>
 
+      <!-- No results after filtering -->
+      <div v-else-if="workspaceDocuments.length === 0" class="text-center py-14 text-text-muted">
+        <p class="text-sm">No documents match this category.</p>
+        <button @click="selectedCategory = 'all'" class="mt-2 text-xs text-accent-primary hover:text-accent-primary/80 font-medium transition-all">
+          Show all documents
+        </button>
+      </div>
+
+      <!-- Document grid -->
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div
           v-for="doc in workspaceDocuments"
           :key="doc.id"
-          class="bg-bg-secondary      -slate-1 rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
+          class="bg-bg-secondary rounded-xl shadow-card hover:shadow-elevated hover:-translate-y-1 transition-all duration-300 p-4 cursor-pointer"
           @click="openDocument((doc as any).supabaseId)"
         >
           <!-- Image preview -->
