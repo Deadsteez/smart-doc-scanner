@@ -14,6 +14,11 @@ const { search, isSearching, isEmbedderReady, parsedQuery, queryExplanation } = 
 // ─── State ────────────────────────────────────────────────────────────────────
 const semanticQuery   = ref('')
 const selectedCategory = ref('all')
+const filterStartDate = ref('')
+const filterEndDate   = ref('')
+const filterMinAmount = ref(null)
+const filterMaxAmount = ref(null)
+
 const showInsights    = ref(false)
 const searchDebounce  = ref(null)
 const searchResults   = ref(null)   // null = no search active
@@ -41,6 +46,39 @@ const documents = computed(() => {
   // Category filter on top
   if (selectedCategory.value !== 'all') {
     docs = docs.filter(d => d.category?.type === selectedCategory.value)
+  }
+
+  // Date filters
+  if (filterStartDate.value) {
+    const start = new Date(filterStartDate.value).getTime()
+    docs = docs.filter(d => d.createdAt >= start)
+  }
+  if (filterEndDate.value) {
+    const end = new Date(filterEndDate.value).getTime() + 86400000 - 1
+    docs = docs.filter(d => d.createdAt <= end)
+  }
+  
+  // Amount filters
+  if (filterMinAmount.value !== null && filterMinAmount.value !== '') {
+    const min = parseFloat(filterMinAmount.value)
+    if (!isNaN(min)) {
+      docs = docs.filter(d => {
+        if (!d.extracted?.total) return false
+        const val = parseFloat(String(d.extracted.total).replace(/[,\s]/g, ''))
+        return !isNaN(val) && val >= min
+      })
+    }
+  }
+
+  if (filterMaxAmount.value !== null && filterMaxAmount.value !== '') {
+    const max = parseFloat(filterMaxAmount.value)
+    if (!isNaN(max)) {
+      docs = docs.filter(d => {
+        if (!d.extracted?.total) return false
+        const val = parseFloat(String(d.extracted.total).replace(/[,\s]/g, ''))
+        return !isNaN(val) && val <= max
+      })
+    }
   }
 
   return docs
@@ -88,6 +126,14 @@ function deleteDoc(id, event) {
 function clearSearch() {
   semanticQuery.value = ''
   searchResults.value = null
+}
+
+function clearFilters() {
+  selectedCategory.value = 'all'
+  filterStartDate.value = ''
+  filterEndDate.value = ''
+  filterMinAmount.value = null
+  filterMaxAmount.value = null
 }
 </script>
 
@@ -176,7 +222,7 @@ function clearSearch() {
     </div>
 
     <!-- ─── Filters row ──────────────────────────────────────────────────── -->
-    <div class="flex gap-2 flex-wrap mb-5">
+    <div class="flex gap-3 flex-wrap mb-5 items-center bg-bg-secondary/50 p-3 rounded-2xl border border-slate-1/50">
       <select v-model="selectedCategory"
         class="px-3.5 py-2 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all">
         <option value="all">All Types</option>
@@ -189,6 +235,33 @@ function clearSearch() {
         <option value="contract">📝 Contract</option>
         <option value="other">📄 Other</option>
       </select>
+
+      <!-- Date Range -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-text-muted text-xs font-medium pl-1">Date:</span>
+        <input type="date" v-model="filterStartDate"
+          class="px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all" />
+        <span class="text-text-muted text-xs">to</span>
+        <input type="date" v-model="filterEndDate"
+          class="px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all" />
+      </div>
+
+      <!-- Amount Range -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-text-muted text-xs font-medium pl-1">Amount:</span>
+        <input type="number" v-model="filterMinAmount" placeholder="Min"
+          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50" />
+        <span class="text-text-muted text-xs">-</span>
+        <input type="number" v-model="filterMaxAmount" placeholder="Max"
+          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50" />
+      </div>
+
+      <!-- Clear Filters -->
+      <button v-if="filterStartDate || filterEndDate || filterMinAmount !== null || filterMaxAmount !== null || selectedCategory !== 'all'" 
+        @click="clearFilters"
+        class="text-xs text-text-muted hover:text-rose-400 transition-colors px-2 py-1 ml-auto">
+        Clear Filters
+      </button>
     </div>
 
     <!-- ─── Sync status ──────────────────────────────────────────────────── -->
