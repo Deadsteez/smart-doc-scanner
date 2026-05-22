@@ -51,9 +51,13 @@ const nlpBusy = ref(false)
 const nlpQueue = []
 const currentNlpJob = ref(null)
 
-
 const isRegionPassPending = ref(false)
 
+// Multi-page PDF processing state
+const isMultiPagePdf = ref(false)
+const multiPagePdfPages = ref([])
+const multiPageCurrentIndex = ref(0)
+const multiPageText = ref([])
 
 let firstPassTextSnapshot = null
 
@@ -69,6 +73,9 @@ onMounted(() => {
   preprocessWorker.onmessage = (e) => {
     if (e.data.cleanedImage) {
       processedImage.value = e.data.cleanedImage
+      if (isMultiPagePdf.value) {
+        runOCR()
+      }
     }
   }
   preprocessWorker.onerror = (err) => console.error('Preprocess worker error:', err)
@@ -78,10 +85,15 @@ onMounted(() => {
     const msg = e.data
 
     if (msg.type === 'progress') {
-      
-      ocrProgress.value = isRegionPassPending.value
-        ? Math.min(99, Math.floor(msg.progress * 100))
-        : Math.floor(msg.progress * 100)
+      if (isMultiPagePdf.value) {
+        const pageWeight = 100 / multiPagePdfPages.value.length
+        const baseProgress = multiPageCurrentIndex.value * pageWeight
+        ocrProgress.value = Math.min(99, Math.floor(baseProgress + (msg.progress * pageWeight)))
+      } else {
+        ocrProgress.value = isRegionPassPending.value
+          ? Math.min(99, Math.floor(msg.progress * 100))
+          : Math.floor(msg.progress * 100)
+      }
       return
     }
 
@@ -122,6 +134,29 @@ onMounted(() => {
       ocrText.value = combined
 
       await saveDocument(combined,true)
+      return
+    }
+
+    if (isMultiPagePdf.value) {
+      multiPageText.value.push(msg.text)
+      multiPageCurrentIndex.value++
+      
+      if (multiPageCurrentIndex.value < multiPagePdfPages.value.length) {
+        const nextPageImage = multiPagePdfPages.value[multiPageCurrentIndex.value].image
+        processImage(nextPageImage, true)
+      } else {
+        isMultiPagePdf.value = false
+        const combinedText = multiPageText.value.join('\n\n--- Page Break ---\n\n')
+        ocrText.value = combinedText
+        firstPassTextSnapshot = combinedText
+        ocrProgress.value = 100
+        
+        // Restore first page image for saving
+        processedImage.value = multiPagePdfPages.value[0].image
+        capturedImage.value = multiPagePdfPages.value[0].image
+        
+        await saveDocument(combinedText)
+      }
       return
     }
 
@@ -183,7 +218,8 @@ onMounted(() => {
           processedImage.value &&
           docType !== 'other' &&
           !job.isRefinement &&
-          !isRegionPassPending.value
+          !isRegionPassPending.value &&
+          pdfPages.value.length <= 1 // disable region pass for multi-page PDFs
         ) {
           fireRegionPass(processedImage.value, docType)
         }
@@ -286,7 +322,21 @@ function handlePdfPagesSelected(pages) {
   pdfPages.value = pages
   currentPdfPageIndex.value = 0
   showPdfUploader.value = false
-  if (pages.length > 0) processImage(pages[0].image)
+  
+  if (pages.length === 0) return
+
+  if (pages.length === 1) {
+    isMultiPagePdf.value = false
+    processImage(pages[0].image, true)
+  } else {
+    isMultiPagePdf.value = true
+    multiPagePdfPages.value = pages
+    multiPageCurrentIndex.value = 0
+    multiPageText.value = []
+    
+    // Start processing first page
+    processImage(pages[0].image, true)
+  }
 }
 
 function handlePdfCancel() {
