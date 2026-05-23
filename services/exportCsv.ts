@@ -15,7 +15,6 @@ export function exportDocumentsToCSV(docs: DocumentRecord[]):boolean {
     doc.id ?? '',
     new Date(doc.createdAt).toLocaleString(),
     doc.category?.type ?? '',
-    doc.category?.nlpLabel??'',
     doc.category?.confidence ? Math.round(doc.category.confidence * 100) + '%' : '',
     doc.extracted?.vendor ?? '',
     doc.extracted?.date ?? '',
