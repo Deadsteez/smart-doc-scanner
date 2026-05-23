@@ -81,16 +81,16 @@ const totalDocuments = computed(() => documentStore.documents.length)
 function categoryClass(category) {
   return (
     {
-      receipt:        'bg-sky-500/15 text-sky-400 border border-sky-500/25',
-      invoice:        'bg-emerald-500/15 text-emerald-400 border border-emerald-500/25',
-      bank_statement: 'bg-blue-500/15 text-blue-400 border border-blue-500/25',
-      payment_slip:   'bg-amber-500/15 text-amber-400 border border-amber-500/25',
-      utility_bill:   'bg-violet-500/15 text-violet-400 border border-violet-500/25',
-      tax_document:   'bg-rose-500/15 text-rose-400 border border-rose-500/25',
-      contract:       'bg-cyan-500/15 text-cyan-400 border border-cyan-500/25',
-      other:          'bg-slate-2/15 text-text-secondary border border-slate-500/25',
-      uncategorized:  'bg-slate-2/15 text-text-secondary border border-slate-500/25',
-    }[category?.type] || 'bg-slate-2/15 text-text-secondary border border-slate-500/25'
+      receipt:        'bg-sky-500/15 text-sky-400  border-sky-500/25',
+      invoice:        'bg-emerald-500/15 text-emerald-400  border-emerald-500/25',
+      bank_statement: 'bg-blue-500/15 text-blue-400  border-blue-500/25',
+      payment_slip:   'bg-amber-500/15 text-amber-400  border-amber-500/25',
+      utility_bill:   'bg-violet-500/15 text-violet-400  border-violet-500/25',
+      tax_document:   'bg-rose-500/15 text-rose-400  border-rose-500/25',
+      contract:       'bg-cyan-500/15 text-cyan-400  border-cyan-500/25',
+      other:          'bg-slate-2/15 text-text-secondary  border-slate-500/25',
+      uncategorized:  'bg-slate-2/15 text-text-secondary  border-slate-500/25',
+    }[category?.type] || 'bg-slate-2/15 text-text-secondary  border-slate-500/25'
   )
 }
 
@@ -207,7 +207,7 @@ function clearFilters() {
         <input
           v-model="semanticQuery"
           placeholder="Search semantically… e.g. 'petrol expenses last month' or 'Swiggy bills above ₹500'"
-          class="w-full pl-11 pr-12 py-3.5 rounded-2xl bg-bg-secondary border text-text-primary placeholder-slate-600 text-sm transition-all outline-none"
+          class="w-full pl-11 pr-12 py-3.5 rounded-2xl bg-bg-secondary  text-text-primary placeholder-slate-600 text-sm transition-all outline-none"
           :class="semanticQuery
             ? 'border-violet-500/60 ring-2 ring-violet-500/15 shadow-lg shadow-violet-500/10'
             : 'border-slate-1/60 hover:border-slate-2 focus:border-violet-500/60 focus:ring-2 focus:ring-violet-500/15'"
@@ -226,7 +226,7 @@ function clearFilters() {
       <!-- Parsed query explanation -->
       <div
         v-if="semanticQuery && queryExplanation"
-        class="flex items-center gap-2 px-4 py-2 bg-violet-500/8 border border-violet-500/20 rounded-xl text-xs text-violet-300 flex-wrap"
+        class="flex items-center gap-2 px-4 py-2 bg-violet-500/8  border-violet-500/20 rounded-xl text-xs text-violet-300 flex-wrap"
       >
         <span class="font-semibold text-violet-400">AI understood:</span>
         <span>{{ queryExplanation }}</span>
@@ -238,20 +238,20 @@ function clearFilters() {
       <!-- Embedder loading notice -->
       <div
         v-else-if="!isEmbedderReady && totalDocuments > 0"
-        class="flex items-center gap-2 px-4 py-2 bg-bg-tertiary/60 border border-slate-1/40 rounded-xl text-xs text-text-muted"
+        class="flex items-center gap-2 px-4 py-2 bg-bg-tertiary/60  border-slate-1/40 rounded-xl text-xs text-text-muted"
       >
-        <div class="w-3 h-3 border border-slate-500 border-t-transparent rounded-full animate-spin"></div>
+        <div class="w-3 h-3  border-slate-500 border-t-transparent rounded-full animate-spin"></div>
         Loading semantic AI model… search will be available shortly
       </div>
     </div>
 
     <!-- ─── Filter bar ────────────────────────────────────────────────────── -->
-    <div class="flex gap-3 flex-wrap mb-5 items-center bg-bg-secondary/50 p-3 rounded-2xl border border-slate-1/50">
+    <div class="flex gap-3 flex-wrap mb-5 items-center bg-bg-secondary/50 p-3 rounded-2xl  border-slate-1/50">
 
       <!-- Category -->
       <select
         v-model="selectedCategory"
-        class="px-3.5 py-2 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
+        class="px-3.5 py-2 rounded-xl bg-bg-secondary  border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
       >
         <option value="all">All Types</option>
         <option value="receipt">🛒 Receipt</option>
@@ -271,13 +271,13 @@ function clearFilters() {
         <input
           type="date"
           v-model="filterStartDate"
-          class="px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
+          class="px-3 py-1.5 rounded-xl bg-bg-secondary  border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
         />
         <span class="text-text-muted text-xs">to</span>
         <input
           type="date"
           v-model="filterEndDate"
-          class="px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
+          class="px-3 py-1.5 rounded-xl bg-bg-secondary  border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all"
         />
       </div>
 
@@ -288,14 +288,14 @@ function clearFilters() {
           type="number"
           v-model="filterMinAmount"
           placeholder="Min"
-          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50"
+          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary  border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50"
         />
         <span class="text-text-muted text-xs">-</span>
         <input
           type="number"
           v-model="filterMaxAmount"
           placeholder="Max"
-          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary border border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50"
+          class="w-20 px-3 py-1.5 rounded-xl bg-bg-secondary  border-slate-1 text-text-secondary text-sm focus:border-violet-500/60 focus:outline-none transition-all placeholder:text-text-muted/50"
         />
       </div>
 
@@ -311,7 +311,7 @@ function clearFilters() {
 
     <!-- ─── Sync indicator ───────────────────────────────────────────────── -->
     <div v-if="documentStore.syncing" class="mb-4 flex items-center gap-2 text-xs text-text-muted">
-      <div class="w-3 h-3 border border-slate-500 border-t-transparent rounded-full animate-spin"></div>
+      <div class="w-3 h-3  border-slate-500 border-t-transparent rounded-full animate-spin"></div>
       Syncing to cloud…
     </div>
 
@@ -339,12 +339,12 @@ function clearFilters() {
         v-for="doc in documents"
         :key="doc.id"
         :to="`/doc/${doc.id}`"
-        class="relative bg-bg-secondary border border-slate-1/50 rounded-2xl hover:border-sky-500/40 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_-5px_rgba(2,132,199,0.15),0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 p-4 block group"
+        class="relative bg-bg-secondary  border-slate-1/50 rounded-2xl hover:border-sky-500/40 hover:-translate-y-1.5 hover:shadow-[0_10px_30px_-5px_rgba(2,132,199,0.15),0_4px_12px_rgba(0,0,0,0.08)] transition-all duration-300 p-4 block group"
       >
 
         <!-- Delete button -->
         <button
-          class="absolute top-3 right-3 z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white border border-slate-200 text-red-600 dark:text-black hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
+          class="absolute top-3 right-3 z-50 w-8 h-8 flex items-center justify-center rounded-full bg-white  border-slate-200 text-red-600 dark:text-black hover:bg-red-600 hover:text-white dark:hover:bg-red-600 dark:hover:text-white shadow-lg hover:scale-105 active:scale-95 transition-all duration-200"
           title="Delete document"
           @click="deleteDoc(doc.id, $event)"
         >
@@ -360,7 +360,7 @@ function clearFilters() {
         <!-- Semantic similarity score badge (shown during search) -->
         <div
           v-if="getSemScore(doc) !== null"
-          class="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-mono border border-violet-500/30 z-10"
+          class="absolute top-3 left-3 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-mono  border-violet-500/30 z-10"
         >
           {{ getSemScore(doc) }}% match
         </div>
@@ -402,7 +402,7 @@ function clearFilters() {
         <div class="flex items-center gap-1.5 flex-wrap mb-2">
           <span
             v-if="expenseCategoryBadge(doc)"
-            class="text-[10px] px-2 py-0.5 rounded-full border font-medium flex items-center gap-1"
+            class="text-[10px] px-2 py-0.5 rounded-full  font-medium flex items-center gap-1"
             :style="{
               color: expenseCategoryBadge(doc).color,
               borderColor: expenseCategoryBadge(doc).color + '40',
@@ -413,14 +413,14 @@ function clearFilters() {
           </span>
           <span
             v-if="doc.extracted?.semanticStatus"
-            class="text-[10px] px-2 py-0.5 rounded-full border font-medium flex items-center gap-1 bg-sky-500/10 text-sky-400 border-sky-500/30 capitalize"
+            class="text-[10px] px-2 py-0.5 rounded-full  font-medium flex items-center gap-1 bg-sky-500/10 text-sky-400 border-sky-500/30 capitalize"
           >
             {{ doc.extracted.semanticStatus }}
           </span>
           <span
             v-for="tag in (doc.semanticTags ?? []).slice(0, 2)"
             :key="tag"
-            class="text-[10px] px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-muted border border-slate-1"
+            class="text-[10px] px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-muted  border-slate-1"
           >
             {{ tag }}
           </span>
